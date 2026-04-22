@@ -1,0 +1,31 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth.store'
+import LoginView from '@/views/LoginView.vue'
+import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    { path: '/', redirect: '/login' },
+    { path: '/login', component: LoginView, meta: { guest: true } },
+    { path: '/forgot-password', component: ForgotPasswordView, meta: { guest: true } },
+    {
+      path: '/reset-password',
+      component: () => import('@/views/ResetPasswordView.vue'),
+      // ← pas de meta guest ici !
+    },
+    {
+      path: '/dashboard',
+      component: () => import('@/views/DashboardView.vue'),
+      meta: { requiresAuth: true },
+    },
+  ],
+})
+
+router.beforeEach((to) => {
+  const auth = useAuthStore()
+  if (to.meta.requiresAuth && !auth.isAuthenticated) return '/login'
+  if (to.meta.guest && auth.isAuthenticated) return '/dashboard'
+})
+
+export default router

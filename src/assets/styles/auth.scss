@@ -1,0 +1,282 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+* { box-sizing: border-box; }
+
+.auth-layout {
+  display: flex;
+  min-height: 100vh;
+  font-family: 'Outfit', sans-serif;
+}
+
+/* ── Panneau gauche — violet plus clair ── */
+.left-panel {
+  flex: 1;
+  background: linear-gradient(150deg, #6d28d9 0%, #8b5cf6 40%, #a78bfa 75%, #c4b5fd 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 36px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Logo fixe haut gauche */
+.mb-logo {
+  position: absolute;
+  top: 24px;
+  left: 28px;
+  z-index: 10;
+  margin-bottom: 0;
+  :deep(.traity-name) { color: #fff !important; }
+  :deep(svg) { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+}
+
+/* Cercles décoratifs — déplacés pour ne pas gêner les stats */
+.left-panel::before {
+  content: '';
+  position: absolute;
+  width: 300px; height: 300px;   /* ← plus grand, centré sur l'avatar */
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);  /* ← centré derrière la tête */
+  animation: floatUp 5s ease-in-out infinite;
+}
+
+.left-panel::after {
+  content: '';
+  position: absolute;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: floatDown 6s ease-in-out infinite;
+}
+
+@keyframes floatUp {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.6; }
+  50%       { transform: translateY(-20px) scale(1.08); opacity: 1; }
+}
+@keyframes floatDown {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.5; }
+  50%       { transform: translateY(16px) scale(1.05); opacity: 0.9; }
+}
+
+/* Avatar — fond transparent */
+.avatar-card {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 28px;
+  z-index: 1;
+}
+
+.avatar-img {
+  width: 210px;
+  height: auto;
+  display: block;
+  mix-blend-mode: multiply;
+  filter: drop-shadow(0 12px 32px rgba(80, 0, 120, 0.35));
+}
+
+/* Stats */
+.stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+  z-index: 1;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: #fff;
+
+  .stat-icon  { font-size: 20px; }
+  .stat-value { font-size: 15px; font-weight: 600; margin: 0; }
+  .stat-label { font-size: 11px; opacity: 0.8; margin: 0; }
+  .stat-badge {
+    margin-left: auto;
+    font-size: 11px; font-weight: 600;
+    color: #d1fae5;
+    background: rgba(52,211,153,0.2);
+    border-radius: 6px;
+    padding: 2px 8px;
+  }
+}
+
+/* ── Panneau droit ── */
+.right-panel {
+  width: 460px;
+  background: #f5f3ff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 44px;
+  position: relative;
+}
+
+/* Logo haut gauche panneau droit */
+.form-logo-wrap {
+  position: absolute;
+  top: 24px;
+  left: 28px;
+}
+
+.form-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #4c1d95;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.form-sub {
+  font-size: 13px;
+  color: #7c3aed;
+  text-align: center;
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
+
+.auth-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #7c3aed;
+    letter-spacing: 0.4px;
+  }
+
+  input {
+    padding: 11px 14px;
+    border: 1.5px solid #ddd6fe;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: 'Outfit', sans-serif;
+    background: #fff;
+    color: #4c1d95;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+
+    &:focus {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.12);
+    }
+    &::placeholder { color: #c4b5fd; }
+  }
+}
+
+.pass-field {
+  position: relative;
+  input { width: 100%; padding-right: 42px; }
+  .eye-btn {
+    position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    font-size: 16px; opacity: 0.5;
+    &:hover { opacity: 0.85; }
+  }
+}
+
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .remember-me {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: #7c3aed; cursor: pointer;
+    input { accent-color: #8b5cf6; }
+  }
+
+  .forgot-link {
+    font-size: 12px; color: #8b5cf6;
+    text-decoration: underline;
+    &:hover { color: #6d28d9; }
+  }
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  transition: opacity 0.2s, transform 0.1s;
+  display: flex; align-items: center; justify-content: center;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+  &:active:not(:disabled) { transform: translateY(0); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+}
+
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-msg {
+  font-size: 13px; color: #dc2626;
+  background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: 8px; padding: 10px 14px; margin: 0;
+}
+
+.success-alert {
+  font-size: 13px; color: #166534;
+  background: #f0fdf4; border: 1px solid #86efac;
+  border-radius: 10px; padding: 14px; text-align: center;
+  width: 100%; margin-bottom: 16px;
+}
+
+.register-link, .back-link {
+  margin-top: 20px;
+  font-size: 13px; color: #8b5cf6; text-align: center;
+  a, &.back-link {
+    color: #7c3aed; font-weight: 600;
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+@media (max-width: 768px) {
+  .auth-layout { flex-direction: column; }
+  .left-panel { min-height: 280px; padding: 32px; }
+  .right-panel { width: 100%; padding: 32px 24px; }
+  .mb-logo, .form-logo-wrap { position: relative; top: auto; left: auto; }
+}
