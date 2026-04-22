@@ -1,7 +1,9 @@
+// ✅ APRÈS
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import LoginView from '@/views/LoginView.vue'
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
+import TraitesView from '@/views/TraitesView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -12,15 +14,20 @@ const router = createRouter({
     {
       path: '/reset-password',
       component: () => import('@/views/ResetPasswordView.vue'),
-      // ← pas de meta guest ici !
     },
     {
       path: '/dashboard',
       component: () => import('@/views/DashboardView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/traites',
+      name: 'Traites',
+      component: TraitesView,
+      meta: { requiresAuth: true }
+    }
   ],
-})
+}) // ✅ PARENTHÈSE AJOUTÉE
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
