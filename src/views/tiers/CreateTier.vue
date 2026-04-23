@@ -1,4 +1,5 @@
 <template>
+  <!-- ✅ Layout avec Sidebar -->
   <div class="page-layout">
     <Sidebar />
 
@@ -32,8 +33,6 @@
               </span>
             </div>
 
-            <!-- ✅ SELECT DYNAMIQUE — les options viennent de GET /api/types-tiers -->
-            <!-- Plus d'IDs hardcodés. Si vous ajoutez un type en BDD, il apparaît automatiquement. -->
             <div class="field-group">
               <label class="field-label">
                 Type de Tiers <span class="required-star">*</span>
@@ -42,15 +41,10 @@
                 v-model="formState.types_tiers_id"
                 class="field-input"
                 :class="{ 'field-input-error': errors.types_tiers_id }"
-                :disabled="loadingTypes"
               >
-                <option value="" disabled>
-                  {{ loadingTypes ? 'Chargement...' : '-- Sélectionner --' }}
-                </option>
-                <!-- :value="t.id" envoie l'ID réel de la BDD (ex: 1, 2...) -->
-                <option v-for="t in typesTiers" :key="t.id" :value="t.id">
-                  {{ t.type }}
-                </option>
+                <option value="" disabled>-- Sélectionner --</option>
+                <option value="1">Client</option>
+                <option value="2">Fournisseur</option>
               </select>
               <span v-if="errors.types_tiers_id" class="field-error-text">
                 {{ errors.types_tiers_id }}
@@ -118,9 +112,25 @@
               class="btn btn-primary"
               :disabled="loading"
             >
-              <svg v-if="loading" class="btn-icon spin" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+              <!-- Spinner -->
+              <svg
+                v-if="loading"
+                class="btn-icon spin"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566
+                   1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1
+                   1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002
+                   5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0
+                   11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0
+                   01.61-1.276z"
+                  clip-rule="evenodd"
+                />
               </svg>
+              <!-- Icône plus -->
               <svg v-else class="btn-icon" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
               </svg>
@@ -149,8 +159,8 @@
               ✓ Tiers créé avec succès.
             </div>
           </Transition>
-
         </form>
+
       </div>
     </main>
   </div>
@@ -160,8 +170,7 @@
 import Sidebar from '@/components/Sidebar.vue'
 import { useTiers } from '@/composables/useTiers'
 
-// ✅ Récupère l'idSociete depuis le store auth (utilisateur connecté)
-// Remplacez "1" par : useAuthStore().user?.idSociete ?? 1
+// ✅ TODO : remplacer par la valeur dynamique du store (ex: authStore.user.societeId)
 const currentSocieteId = 1
 
 const {
@@ -170,13 +179,12 @@ const {
   loading,
   success,
   generalError,
-  typesTiers,    // ✅ liste des types chargée depuis l'API
-  loadingTypes,  // ✅ état de chargement du select
   createTier,
   resetForm,
 } = useTiers(currentSocieteId)
 </script>
 
 <style lang="scss">
+// ✅ Styles externes — PAS scoped pour que .page-layout fonctionne avec le Sidebar fixe
 @import '@/assets/styles/create-tier.scss';
 </style>
