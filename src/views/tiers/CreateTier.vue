@@ -43,8 +43,9 @@
                 :class="{ 'field-input-error': errors.types_tiers_id }"
               >
                 <option value="" disabled>-- Sélectionner --</option>
-                <option value="1">Client</option>
-                <option value="2">Fournisseur</option>
+                <option value="2">Client</option>
+                <option value="1">Fournisseur</option>
+                
               </select>
               <span v-if="errors.types_tiers_id" class="field-error-text">
                 {{ errors.types_tiers_id }}

@@ -1,6 +1,6 @@
-import { ref, reactive, onMounted } from 'vue';
-import { tiersApi, typesTiersApi } from '@/api/tiers.api';
-import type { TypeTier } from '@/api/tiers.api';
+import { ref, reactive } from 'vue';
+import { tiersApi } from '@/api/tiers.api';
+import type { ApiError } from '@/types/tiers';
 
 interface FormErrors {
   raison_sociale?: string;
@@ -16,10 +16,6 @@ export function useTiers(initialSocieteId: number) {
   const generalError = ref<string | null>(null);
   const errors = reactive<FormErrors>({});
 
-  // ✅ AJOUT : liste des types chargée dynamiquement depuis GET /api/types-tiers
-  const typesTiers = ref<TypeTier[]>([]);
-  const loadingTypes = ref(false);
-
   const formState = reactive({
     raison_sociale: '',
     email: '',
@@ -29,20 +25,8 @@ export function useTiers(initialSocieteId: number) {
     idSociete: initialSocieteId
   });
 
-  // ✅ AJOUT : charge les types au montage du composable
-  onMounted(async () => {
-    loadingTypes.value = true;
-    try {
-      const res = await typesTiersApi.getAll();
-      typesTiers.value = res.data;
-    } catch {
-      generalError.value = 'Impossible de charger les types de tiers.';
-    } finally {
-      loadingTypes.value = false;
-    }
-  });
-
   const clearErrors = () => {
+    // CORRECTION ICI : On force le type des clés pour éviter l'erreur "No index signature"
     (Object.keys(errors) as Array<keyof FormErrors>).forEach((key) => {
       delete errors[key];
     });
@@ -65,7 +49,7 @@ export function useTiers(initialSocieteId: number) {
     }
 
     if (!formState.adresse.trim()) {
-      errors.adresse = "L'adresse est requise.";
+      errors.adresse = 'L\'adresse est requise.';
       isValid = false;
     }
 
@@ -96,29 +80,28 @@ export function useTiers(initialSocieteId: number) {
         email: formState.email,
         adresse: formState.adresse,
         num_tel: parseInt(formState.num_tel, 10),
-        types_tiers_id: parseInt(formState.types_tiers_id, 10), // ✅ envoie l'ID réel de la BDD
+        types_tiers_id: parseInt(formState.types_tiers_id, 10),
         idSociete: formState.idSociete
       };
 
       await tiersApi.create(payload);
       success.value = true;
-
-    } catch (err: unknown) {
+      
+    } catch (err: any) {
       success.value = false;
-      // ✅ CORRECTION : typage propre sans "any"
-      const e = err as { message?: string; errors?: Record<string, string[]> };
-
-      if (e?.message) {
-        generalError.value = e.message;
-        if (e.errors) {
-          if (e.errors.email)           errors.email           = e.errors.email[0];
-          if (e.errors.num_tel)         errors.num_tel         = e.errors.num_tel[0];
-          if (e.errors.types_tiers_id)  errors.types_tiers_id  = e.errors.types_tiers_id[0];
-          if (e.errors.raison_sociale)  errors.raison_sociale  = e.errors.raison_sociale[0];
-          if (e.errors.adresse)         errors.adresse         = e.errors.adresse[0];
+      const apiError = err as ApiError;
+      
+      if (apiError?.message) {
+        generalError.value = apiError.message;
+        
+        if (apiError.errors) {
+          // Note: Assurez-vous que votre type ApiError contient bien ces champs
+          if (apiError.errors.email) errors.email = apiError.errors.email[0];
+          if (apiError.errors.num_tel) errors.num_tel = apiError.errors.num_tel[0];
+          if (apiError.errors.types_tiers_id) errors.types_tiers_id = apiError.errors.types_tiers_id[0];
         }
       } else {
-        generalError.value = 'Erreur technique inconnue.';
+        generalError.value = "Erreur technique inconnue.";
       }
     } finally {
       loading.value = false;
@@ -141,8 +124,6 @@ export function useTiers(initialSocieteId: number) {
     loading,
     success,
     generalError,
-    typesTiers,      // ✅ exposé pour le template
-    loadingTypes,    // ✅ exposé pour afficher "Chargement..." dans le select
     createTier,
     resetForm
   };
