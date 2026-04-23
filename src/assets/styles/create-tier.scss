@@ -1,0 +1,283 @@
+// =============================================================================
+// CreateTier Page Styles
+// =============================================================================
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+// ─── Layout ──────────────────────────────────────────────────────────────────
+.page-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f8f7fc;
+}
+
+.page-content {
+  margin-left: 240px;          // largeur du sidebar fixe
+  flex: 1;
+  padding: 40px 48px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+// ─── Card formulaire ─────────────────────────────────────────────────────────
+.tier-form-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 36px 40px;
+  box-shadow: 0 10px 40px -10px rgba(124, 58, 237, 0.1);
+  font-family: 'Outfit', sans-serif;
+  color: #1f2937;
+  width: 100%;
+  max-width: 620px;
+}
+
+// ─── Header ──────────────────────────────────────────────────────────────────
+.form-header {
+  margin-bottom: 28px;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 16px;
+
+  .form-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #4c1d95;
+    margin: 0 0 6px 0;
+  }
+
+  .form-subtitle {
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+}
+
+// ─── Body ────────────────────────────────────────────────────────────────────
+.form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7c3aed;
+  margin: 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #ede9fe;
+}
+
+// ─── Fields ──────────────────────────────────────────────────────────────────
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.required-star {
+  color: #dc2626;
+  margin-left: 2px;
+}
+
+// ✅ FIX : styles communs aux inputs ET selects
+.field-input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: #1f2937;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  }
+
+  // erreur
+  &.field-input-error {
+    border-color: #dc2626;
+    background: #fef2f2;
+
+    &:focus {
+      border-color: #dc2626;
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    }
+  }
+}
+
+// ✅ FIX : flèche dropdown UNIQUEMENT sur les <select>
+select.field-input {
+  appearance: none;
+  padding-right: 2.5rem;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.25em 1.25em;
+}
+
+// ✅ FIX : retirer les flèches spinner sur input type="number"
+input[type="number"].field-input {
+  -moz-appearance: textfield;
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+.field-error-text {
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin-top: -2px;
+}
+
+// ─── Actions ─────────────────────────────────────────────────────────────────
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  border: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: #fff;
+  box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px -1px rgba(124, 58, 237, 0.4);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid #e5e7eb;
+  color: #4b5563;
+
+  &:hover:not(:disabled) {
+    border-color: #7c3aed;
+    color: #7c3aed;
+    background: #faf5ff;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btn-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+// ─── Messages ────────────────────────────────────────────────────────────────
+.message {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.message-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.message-success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+// ─── Transitions ─────────────────────────────────────────────────────────────
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+// ─── Responsive ──────────────────────────────────────────────────────────────
+@media (max-width: 768px) {
+  .page-content {
+    margin-left: 0;
+    padding: 24px 16px;
+  }
+
+  .tier-form-card {
+    padding: 24px 20px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn {
+    justify-content: center;
+  }
+}

@@ -1,61 +1,52 @@
+// ── Types backend ────────────────────────────────────────────────
+
+export type TypeTraite = 'fournisseur' | 'client';
+
 /** Données du formulaire de création */
 export interface TraiteFormData {
-  fournisseur: string;      // Le tiré (celui qui paie)
-  client: string;           // Le tireur (celui qui émet)
-  banque: string;
-  rib: string;
+  typeTraite: TypeTraite;
+  // Champs libres (plus de sélection depuis le backend)
+  tireurNom: string;          // Nom du tiers (saisie libre)
+  banqueNom: string;          // Nom de la banque (saisie libre)
+  rib: string;                // RIB (saisie libre)
   montantTotal: number;
-  nombreTraitess: number;
-  dateEcheance: string;     // ISO date string
+  nombreTraites: number;
   lieu: string;
   beneficiaire: string;
 }
 
-/** Une traite individuelle générée */
-export interface Traite {
+/** Une traite individuelle dans la série (côté frontend) */
+export interface TraiteItem {
   id: string;
+  index: number;
+  totalDansSerie: number;
   numero: string;
-  fournisseur: string;
-  client: string;
-  banque: string;
-  rib: string;
+  typeTraite: TypeTraite;
   montant: number;
   montantLettres: string;
-  dateEmission: string;
-  dateEcheance: string;
+  dateEmission: string;       // YYYY-MM-DD (today)
+  dateEcheance: string;       // YYYY-MM-DD (éditable)
   lieu: string;
   beneficiaire: string;
-  index: number;            // Position dans la série (0-based)
-  totalDansSerie: number;   // Nombre total dans la série
+  tireurNom: string;
+  banqueNom: string;
+  rib: string;
 }
 
-/** Payload envoyé au backend pour sauvegarde */
-export interface SaveTraitessPayload {
-  traitess: Omit<Traite, 'id' | 'montantLettres'>[];
+/** Payload envoyé au backend (une traite à la fois) */
+export interface SaveTraitePayload {
+  montant: number;
+  type_traite: TypeTraite;
+  date_emission: string;
+  date_echeance: string;
+  tireur_nom: string;
+  banque_nom: string;
+  rib: string;
+  statuts_traites_id?: number;
 }
 
-/** Réponse du backend */
-export interface TraiteApiResponse {
-  success: boolean;
-  message: string;
-  data?: {
-    traitess: Traite[];
-    reference: string;
-  };
-}
-
-/** Positions des champs sur le template de traite (en %) */
-export interface TraiteFieldPositions {
-  numero: { top: string; right: string };
-  tireur: { top: string; left: string };
-  tire: { top: string; left: string };
-  banque: { top: string; left: string };
-  rib: { top: string; left: string };
-  montantChiffres: { top: string; right: string };
-  montantLettres: { top: string; left: string; width: string };
-  dateEcheance: { top: string; right: string };
-  lieu: { top: string; left: string };
-  dateEmission: { top: string; left: string };
-  beneficiaire: { top: string; left: string };
-  signature: { bottom: string; right: string };
+/** Statut traite depuis le backend */
+export interface StatutTraite {
+  id: number;
+  statut: string;
 }

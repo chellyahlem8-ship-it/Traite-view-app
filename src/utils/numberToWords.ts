@@ -15,7 +15,6 @@ const TENS = [
   'cinquante', 'soixante', 'soixante', 'quatre-vingt', 'quatre-vingt'
 ];
 
-/** Convertit un nombre de 0 à 99 en lettres */
 function convertBelow100(n: number): string {
   if (n < 20) return UNITS[n];
   if (n === 20) return 'vingt';
@@ -23,31 +22,21 @@ function convertBelow100(n: number): string {
 
   const ten = Math.floor(n / 10);
   const unit = n % 10;
-  let result = TENS[ten];
 
-  // Cas spécifiques 70-79 : soixante-dix, soixante-et-onze, soixante-douze...
   if (ten === 7 || ten === 9) {
-    const remainder = n - (ten === 7 ? 60 : 80);
-    if (remainder < 20) {
-      result = ten === 7 ? 'soixante' : 'quatre-vingt';
-      if (remainder === 11 && ten === 7) {
-        return result + '-et-onze';
-      }
-      if (remainder === 1 && ten === 7) {
-        return result + '-et-onze';
-      }
-      return result + '-' + UNITS[remainder];
-    }
+    const base = ten === 7 ? 60 : 80;
+    const remainder = n - base;
+    const baseWord = ten === 7 ? 'soixante' : 'quatre-vingt';
+    if (n === 71) return 'soixante-et-onze';
+    return baseWord + '-' + UNITS[remainder];
   }
 
+  let result = TENS[ten];
   if (unit === 0) return result;
-  if (unit === 1 && ten !== 8) {
-    return result + '-et-un';
-  }
+  if (unit === 1 && ten !== 8) return result + '-et-un';
   return result + '-' + UNITS[unit];
 }
 
-/** Convertit un nombre de 0 à 999 en lettres */
 function convertBelow1000(n: number): string {
   if (n === 0) return '';
   if (n < 100) return convertBelow100(n);
@@ -70,11 +59,10 @@ function convertBelow1000(n: number): string {
   return result + ' ' + convertBelow100(remainder);
 }
 
-/** Convertit un nombre entier en lettres françaises */
 function convertInteger(n: number): string {
   if (n === 0) return 'zéro';
 
-  const scales: { value: number; name: string; plural: string }[] = [
+  const scales = [
     { value: 1_000_000_000, name: 'milliard', plural: 'milliards' },
     { value: 1_000_000, name: 'million', plural: 'millions' },
     { value: 1_000, name: 'mille', plural: 'mille' },
@@ -87,13 +75,10 @@ function convertInteger(n: number): string {
   for (const scale of scales) {
     if (remaining >= scale.value) {
       const quotient = Math.floor(remaining / scale.value);
-      const remainder = remaining % scale.value;
+      const rem = remaining % scale.value;
 
       if (scale.value === 1_000) {
-        // "mille" ne prend jamais de "un" devant
-        if (quotient > 1) {
-          result += convertBelow1000(quotient) + ' ';
-        }
+        if (quotient > 1) result += convertBelow1000(quotient) + ' ';
         result += 'mille';
       } else if (scale.value > 1_000) {
         result += convertBelow1000(quotient) + ' ';
@@ -102,20 +87,14 @@ function convertInteger(n: number): string {
         result += convertBelow1000(quotient);
       }
 
-      if (remainder > 0) {
-        result += ' ';
-      }
-      remaining = remainder;
+      if (rem > 0) result += ' ';
+      remaining = rem;
     }
   }
 
   return result.trim();
 }
 
-/**
- * Convertit un montant en DT en texte complet
- * Ex: 12345.678 → "douze mille trois cent quarante-cinq dinars tunisiens et six cent soixante-dix-huit millimes"
- */
 export function montantEnLettres(montant: number): string {
   if (montant === 0) return 'zéro dinar tunisien';
 
@@ -127,16 +106,13 @@ export function montantEnLettres(montant: number): string {
   const millimes = millimesRaw >= 1000 ? 999 : millimesRaw;
 
   let result = '';
-
   if (isNegative) result += 'moins ';
 
-  // Partie dinars
   if (dinars > 0) {
     result += convertInteger(dinars);
     result += dinars === 1 ? ' dinar tunisien' : ' dinars tunisiens';
   }
 
-  // Partie millimes
   if (millimes > 0) {
     if (dinars > 0) result += ' et ';
     result += convertInteger(millimes);

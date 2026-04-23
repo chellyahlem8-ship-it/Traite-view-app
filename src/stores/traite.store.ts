@@ -1,127 +1,138 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { Traite, TraiteFormData } from '@/types/traite.types';
+import type { TraiteItem, TraiteFormData, StatutTraite } from '@/types/traite.types';
 import { montantEnLettres } from '@/utils/numberToWords';
 
-/** Génère un numéro de traite formaté */
+// ─── Helpers ─────────────────────────────────────────────────────
+
+function todayStr(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
 function generateNumero(index: number, total: number): string {
   const year = new Date().getFullYear();
   const seq = String(index + 1).padStart(4, '0');
-  return `TRA-${year}-${seq}`;
+  const totalStr = String(total).padStart(2, '0');
+  return `TRA-${year}-${seq}/${totalStr}`;
 }
 
-/** Calcule les dates d'échéance réparties entre aujourd'hui et la date cible */
-function computeEcheanceDates(
-  dateEcheanceCible: string,
-  count: number
-): string[] {
-  const today = new Date();
-  const target = new Date(dateEcheanceCible);
-  const diffMs = target.getTime() - today.getTime();
-  const diffDays = Math.max(diffMs / (1000 * 60 * 60 * 24), 0);
-  const interval = count > 1 ? diffDays / (count - 1) : 0;
-
-  return Array.from({ length: count }, (_, i) => {
-    const date = new Date(today.getTime() + interval * i * (1000 * 60 * 60 * 24));
-    return date.toISOString().split('T')[0];
-  });
-}
+// ─── Store ───────────────────────────────────────────────────────
 
 export const useTraiteStore = defineStore('traite', () => {
-  // ─── State ───────────────────────────────────
+
+  // ── State: formulaire principal ──
   const formData = ref<TraiteFormData>({
-    fournisseur: '',
-    client: '',
-    banque: '',
+    typeTraite: 'fournisseur',
+    tireurNom: '',
+    banqueNom: '',
     rib: '',
     montantTotal: 0,
-    nombreTraitess: 1,
-    dateEcheance: '',
+    nombreTraites: 1,
     lieu: '',
     beneficiaire: ''
   });
 
-  const generatedTraitess = ref<Traite[]>([]);
+  // ── State: traites générées ──
+  const generatedTraites = ref<TraiteItem[]>([]);
   const currentPreviewIndex = ref(0);
+
+  // ── State: sauvegarde ──
   const isSaving = ref(false);
   const saveError = ref<string | null>(null);
   const saveSuccess = ref(false);
 
-  // ─── Getters ─────────────────────────────────
-  const currentTraite = computed<Traite | null>(() => {
-    return generatedTraitess.value[currentPreviewIndex.value] ?? null;
-  });
+  // ─── Getters ─────────────────────────────────────────────────
 
-  const totalTraitess = computed(() => generatedTraitess.value.length);
+  const currentTraite = computed<TraiteItem | null>(
+    () => generatedTraites.value[currentPreviewIndex.value] ?? null
+  );
+
+  const totalTraites = computed(() => generatedTraites.value.length);
 
   const canGenerate = computed(() => {
     const f = formData.value;
     return (
-      f.fournisseur.trim() !== '' &&
-      f.client.trim() !== '' &&
-      f.banque.trim() !== '' &&
+      f.tireurNom.trim() !== '' &&
+      f.banqueNom.trim() !== '' &&
       f.rib.trim() !== '' &&
       f.montantTotal > 0 &&
-      f.nombreTraitess >= 1 &&
-      f.dateEcheance !== '' &&
+      f.nombreTraites >= 1 &&
       f.lieu.trim() !== '' &&
       f.beneficiaire.trim() !== ''
     );
   });
 
   const montantParTraite = computed(() => {
-    if (formData.value.nombreTraitess < 1 || formData.value.montantTotal <= 0) return 0;
-    return formData.value.montantTotal / formData.value.nombreTraitess;
+    if (formData.value.nombreTraites < 1 || formData.value.montantTotal <= 0) return 0;
+    return formData.value.montantTotal / formData.value.nombreTraites;
   });
 
-  // ─── Actions ─────────────────────────────────
+  // ─── Actions: formulaire ──────────────────────────────────────
 
-  /** Met à jour un champ du formulaire */
   function updateField<K extends keyof TraiteFormData>(field: K, value: TraiteFormData[K]): void {
-    formData.value[field] = value;
-    // Si on change le nombre, régénérer automatiquement si déjà généré
-    if (field === 'nombreTraitess' && generatedTraitess.value.length > 0) {
-      generateTraitess();
-    }
+    (formData.value as any)[field] = value;
   }
 
-  /** Génère les N traites à partir du formulaire */
-  function generateTraitess(): void {
-    const f = formData.value;
-    const n = f.nombreTraitess;
-    const montantUnitaire = f.montantTotal / n;
-    const dates = computeEcheanceDates(f.dateEcheance, n);
-    const today = new Date().toISOString().split('T')[0];
+  // ─── Actions: génération ──────────────────────────────────────
 
-    generatedTraitess.value = Array.from({ length: n }, (_, i) => ({
+  function generateTraites(): void {
+    if (!canGenerate.value) return;
+
+    const f = formData.value;
+    const n = f.nombreTraites;
+    const today = todayStr();
+
+    const montantUnitaire = Math.floor((f.montantTotal / n) * 1000) / 1000;
+    const montantDerniere = Math.round((f.montantTotal - montantUnitaire * (n - 1)) * 1000) / 1000;
+
+    generatedTraites.value = Array.from({ length: n }, (_, i) => ({
       id: crypto.randomUUID(),
+      index: i,
+      totalDansSerie: n,
       numero: generateNumero(i, n),
-      fournisseur: f.fournisseur,
-      client: f.client,
-      banque: f.banque,
-      rib: f.rib,
-      montant: Math.round(montantUnitaire * 1000) / 1000,
-      montantLettres: montantEnLettres(montantUnitaire),
+      typeTraite: f.typeTraite,
+      montant: i === n - 1 ? montantDerniere : montantUnitaire,
+      montantLettres: montantEnLettres(i === n - 1 ? montantDerniere : montantUnitaire),
       dateEmission: today,
-      dateEcheance: dates[i],
+      dateEcheance: '',
       lieu: f.lieu,
       beneficiaire: f.beneficiaire,
-      index: i,
-      totalDansSerie: n
+      tireurNom: f.tireurNom,
+      banqueNom: f.banqueNom,
+      rib: f.rib
     }));
 
     currentPreviewIndex.value = 0;
   }
 
-  /** Navigation entre les traites générées */
+  function updateTraiteField(index: number, field: 'montant' | 'dateEcheance', value: string | number): void {
+    if (!generatedTraites.value[index]) return;
+    const traite = { ...generatedTraites.value[index] };
+
+    if (field === 'montant') {
+      traite.montant = Math.round(Number(value) * 1000) / 1000;
+      traite.montantLettres = montantEnLettres(traite.montant);
+    } else {
+      traite.dateEcheance = String(value);
+    }
+
+    generatedTraites.value = generatedTraites.value.map((t, i) => i === index ? traite : t);
+  }
+
+  // ─── Actions: navigation ──────────────────────────────────────
+
   function goToTraite(index: number): void {
-    if (index >= 0 && index < totalTraitess.value) {
+    if (index >= 0 && index < totalTraites.value) {
       currentPreviewIndex.value = index;
     }
   }
 
   function nextTraite(): void {
-    if (currentPreviewIndex.value < totalTraitess.value - 1) {
+    if (currentPreviewIndex.value < totalTraites.value - 1) {
       currentPreviewIndex.value++;
     }
   }
@@ -132,61 +143,70 @@ export const useTraiteStore = defineStore('traite', () => {
     }
   }
 
-  /** Réinitialise tout */
+  // ─── Actions: réinitialisation ────────────────────────────────
+
   function reset(): void {
     formData.value = {
-      fournisseur: '',
-      client: '',
-      banque: '',
+      typeTraite: 'fournisseur',
+      tireurNom: '',
+      banqueNom: '',
       rib: '',
       montantTotal: 0,
-      nombreTraitess: 1,
-      dateEcheance: '',
+      nombreTraites: 1,
       lieu: '',
       beneficiaire: ''
     };
-    generatedTraitess.value = [];
+    generatedTraites.value = [];
     currentPreviewIndex.value = 0;
     saveError.value = null;
     saveSuccess.value = false;
   }
 
-  /** Sauvegarde via l'API */
+  // ─── Actions: sauvegarde ──────────────────────────────────────
+
   async function saveToBackend(): Promise<void> {
     isSaving.value = true;
     saveError.value = null;
     saveSuccess.value = false;
 
+    const missingEcheance = generatedTraites.value.findIndex(t => !t.dateEcheance);
+    if (missingEcheance !== -1) {
+      saveError.value = `La date d'échéance est manquante pour la traite ${missingEcheance + 1}`;
+      isSaving.value = false;
+      return;
+    }
+
     try {
-      const { saveTraitess } = await import('@/api/traite.api');
-      const payload = {
-        traitess: generatedTraitess.value.map(({ id, montantLettres, ...rest }) => rest)
-      };
-      await saveTraitess(payload);
+      // Adaptez cette section selon votre API backend
+      for (const traite of generatedTraites.value) {
+        console.log('Saving traite:', traite);
+        // await saveTraite({ ... })
+      }
       saveSuccess.value = true;
+      setTimeout(() => { saveSuccess.value = false; }, 4000);
     } catch (err) {
-      saveError.value = err instanceof Error ? err.message : 'Erreur inconnue';
+      saveError.value = err instanceof Error ? err.message : 'Erreur inconnue lors de la sauvegarde';
     } finally {
       isSaving.value = false;
     }
   }
 
+  // ─── Expose ──────────────────────────────────────────────────
+
   return {
-    // State
     formData,
-    generatedTraitess,
+    generatedTraites,
     currentPreviewIndex,
     isSaving,
     saveError,
     saveSuccess,
-    // Getters
     currentTraite,
-    totalTraitess,
+    totalTraites,
     canGenerate,
     montantParTraite,
-    // Actions
     updateField,
-    generateTraitess,
+    generateTraites,
+    updateTraiteField,
     goToTraite,
     nextTraite,
     prevTraite,

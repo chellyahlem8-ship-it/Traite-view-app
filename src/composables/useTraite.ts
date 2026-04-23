@@ -1,35 +1,35 @@
+import { storeToRefs } from 'pinia';
 import { useTraiteStore } from '@/stores/traite.store';
-import { computed } from 'vue';
+import type { TraiteFormData } from '@/types/traite.types';
 
-/**
- * Composable d'interface pour la gestion des traites
- * Expose la logique métier de façon réutilisable sans coupler au store directement
- */
 export function useTraite() {
   const store = useTraiteStore();
 
-  const formState = computed(() => store.formData);
-  const traitess = computed(() => store.generatedTraitess);
-  const current = computed(() => store.currentTraite);
-  const currentIndex = computed(() => store.currentPreviewIndex);
-  const count = computed(() => store.totalTraitess);
-  const isValid = computed(() => store.canGenerate);
-  const unitAmount = computed(() => store.montantParTraite);
-  const saving = computed(() => store.isSaving);
-  const error = computed(() => store.saveError);
-  const success = computed(() => store.saveSuccess);
+  const {
+    formData,
+    generatedTraites,
+    currentTraite,
+    currentPreviewIndex,
+    totalTraites,
+    canGenerate,
+    montantParTraite,
+    isSaving,
+    saveError,
+    saveSuccess
+  } = storeToRefs(store);
 
-  function setField<K extends keyof typeof store.formData>(
-    field: K,
-    value: (typeof store.formData)[K]
-  ): void {
+  function setField<K extends keyof TraiteFormData>(field: K, value: TraiteFormData[K]): void {
     store.updateField(field, value);
   }
 
   function generate(): void {
-    if (store.canGenerate) {
-      store.generateTraitess();
+    if (canGenerate.value) {
+      store.generateTraites();
     }
+  }
+
+  function updateTraiteField(index: number, field: 'montant' | 'dateEcheance', value: string | number): void {
+    store.updateTraiteField(index, field, value);
   }
 
   function navigateTo(index: number): void {
@@ -53,18 +53,19 @@ export function useTraite() {
   }
 
   return {
-    formState,
-    traitess,
-    current,
-    currentIndex,
-    count,
-    isValid,
-    unitAmount,
-    saving,
-    error,
-    success,
+    formState: formData,
+    traites: generatedTraites,
+    current: currentTraite,
+    currentIndex: currentPreviewIndex,
+    count: totalTraites,
+    isValid: canGenerate,
+    unitAmount: montantParTraite,
+    saving: isSaving,
+    error: saveError,
+    success: saveSuccess,
     setField,
     generate,
+    updateTraiteField,
     navigateTo,
     navigateNext,
     navigatePrev,

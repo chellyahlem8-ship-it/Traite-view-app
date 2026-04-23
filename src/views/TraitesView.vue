@@ -1,8 +1,7 @@
-<!-- ✅ CRÉER: src/views/TraitesView.vue -->
 <template>
   <div class="traites-page">
     <AppSidebar />
-    
+
     <main class="traites-main">
       <div class="traites-header">
         <div>
@@ -14,7 +13,7 @@
             <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
             <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
           </svg>
-          {{ traitess.length }} traite(s)
+          {{ traites.length }} traite(s)
         </div>
       </div>
 
@@ -36,10 +35,15 @@ import TraiteForm from '@/components/traites/TraiteForm.vue'
 import TraitePreview from '@/components/traites/TraitePreview.vue'
 import { useTraite } from '@/composables/useTraite'
 
-const { traitess } = useTraite()
+const { traites } = useTraite()
 </script>
 
-<style scoped lang="scss">
+<!-- ⚠️ PAS de "scoped" ici — les styles doivent atteindre TraiteForm et TraitePreview -->
+<style lang="scss">
+// ✅ Import du fichier SCSS global des traites (c'était le problème principal)
+@use '@/assets/styles/traite.scss';
+
+// Styles de layout de cette page
 .traites-page {
   display: flex;
   min-height: 100vh;

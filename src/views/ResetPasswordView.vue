@@ -4,7 +4,8 @@
       <div class="left-logo">
         <TraityLogo :size="36" show-text />
       </div>
-      <img src="@/assets/t.jpg" alt="avatar" class="avatar-img" style="width:200px; margin-top:80px; mix-blend-mode:multiply;" />
+      <!-- Image changée ici -->
+      <img src="@/assets/rei.png" alt="avatar" class="avatar-img" style="width:200px; margin-top:80px; mix-blend-mode:multiply;" />
     </div>
 
     <div class="right-panel">

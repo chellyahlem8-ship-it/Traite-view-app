@@ -3,31 +3,32 @@
     <div class="sidebar-logo">
       <TraityLogo :size="28" show-text />
     </div>
-    
+
     <nav class="sidebar-nav">
-      <!-- ✅ MODIFIÉ : ajout router-link pour Tableau de bord -->
       <router-link to="/dashboard" class="nav-item" active-class="active">
         <span class="nav-icon">🏠</span> Tableau de bord
       </router-link>
 
-      <!-- ✅ MODIFIÉ : remplaçé <a> par <router-link> vers /traites -->
       <router-link to="/traites" class="nav-item" active-class="active">
         <span class="nav-icon">📄</span> Traites
       </router-link>
 
-      <!-- ❌ NON MODIFIÉS : les autres restent des <a> pour l'instant -->
-      <a class="nav-item">
-        <span class="nav-icon">💰</span> Trésorerie
-      </a>
-      <a class="nav-item">
-        <span class="nav-icon">🏦</span> Banques
-      </a>
-      <a class="nav-item">
+      <!-- ✅ AVANT : <button class="nav-item" disabled> -->
+      <!-- ✅ APRÈS : router-link vers la route qui existe maintenant -->
+      <router-link to="/tiers/create" class="nav-item" active-class="active">
         <span class="nav-icon">👥</span> Tiers
-      </a>
-      <a class="nav-item">
+      </router-link>
+
+      <!-- ❌ Ceux-ci restent disabled car pas de route encore -->
+      <button class="nav-item" disabled>
+        <span class="nav-icon">💰</span> Trésorerie
+      </button>
+      <button class="nav-item" disabled>
+        <span class="nav-icon">🏦</span> Banques
+      </button>
+      <button class="nav-item" disabled>
         <span class="nav-icon">⚙️</span> Paramètres
-      </a>
+      </button>
     </nav>
 
     <button class="logout-btn" @click="handleLogout">
@@ -39,15 +40,9 @@
 <script setup lang="ts">
 import { useAuth } from '@/composables/useAuth'
 import TraityLogo from '@/components/TraityLogo.vue'
-// ✅ AJOUTÉ : import de useRoute si vous voulez un state actif custom (optionnel)
-// import { useRoute } from 'vue-router'
-// const route = useRoute()
 
 const { logout } = useAuth()
-
-const handleLogout = () => {
-  logout()
-}
+const handleLogout = () => { logout() }
 </script>
 
 <style scoped lang="scss">
@@ -66,7 +61,7 @@ const handleLogout = () => {
 
 .sidebar-logo {
   margin-bottom: 36px;
-  :deep(.traity-name) { color: #fff ; }
+  :deep(.traity-name) { color: #fff; }
 }
 
 .sidebar-nav {
@@ -82,23 +77,45 @@ const handleLogout = () => {
   gap: 10px;
   padding: 10px 14px;
   border-radius: 10px;
-  color: rgba(255,255,255,0.75);
+  color: rgba(255, 255, 255, 0.75);
   font-size: 14px;
+  font-family: 'Outfit', sans-serif;
   cursor: pointer;
   transition: all 0.2s;
-  text-decoration: none; /* ✅ IMPORTANT : supprime le soulignement du router-link */
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
 
-  &:hover { background: rgba(255,255,255,0.12); color: #fff; }
-  &.active { background: rgba(255,255,255,0.2); color: #fff; font-weight: 600; }
-  .nav-icon { font-size: 16px; }
+  &:hover:not([disabled]) {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
+
+  &.active {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  // Boutons désactivés
+  &[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .nav-icon {
+    font-size: 16px;
+  }
 }
 
 .logout-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
   border-radius: 10px;
   padding: 10px 14px;
@@ -107,7 +124,9 @@ const handleLogout = () => {
   font-family: 'Outfit', sans-serif;
   transition: background 0.2s;
   margin-top: auto;
-  
-  &:hover { background: rgba(255,255,255,0.2); }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
 }
 </style>

@@ -1,85 +1,26 @@
 // ═══════════════════════════════════════════
-// TRAITES — Styles de la page de création
-// Thème : violet (cohérent avec le dashboard)
+// TRAITES — Styles globaux de la page
 // ═══════════════════════════════════════════
 
 // ─── Variables ───────────────────────────
- $traite-primary: #7c3aed;
- $traite-primary-dark: #6d28d9;
- $traite-primary-light: #ede9fe;
- $traite-primary-50: #f5f3ff;
- $traite-bg: #f8f7ff;
- $traite-card: #ffffff;
- $traite-border: #e9e5f5;
- $traite-text: #1e1b4b;
- $traite-text-secondary: #6b7280;
- $traite-text-muted: #9ca3af;
- $traite-success: #059669;
- $traite-success-bg: #ecfdf5;
- $traite-error: #dc2626;
- $traite-error-bg: #fef2f2;
- $traite-radius: 12px;
- $traite-radius-sm: 8px;
- $traite-shadow: 0 1px 3px rgba(124, 58, 237, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
- $traite-shadow-lg: 0 4px 16px rgba(124, 58, 237, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
-
-// ─── Page ────────────────────────────────
-.traites-page {
-  min-height: 100vh;
-  background: $traite-bg;
-  padding: 0;
-}
-
-.traites-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 28px 32px 0;
-}
-
-.traites-title {
-  font-size: 1.75rem;
-  font-weight: 800;
-  color: $traite-text;
-  margin: 0;
-  letter-spacing: -0.02em;
-}
-
-.traites-subtitle {
-  font-size: 0.875rem;
-  color: $traite-text-secondary;
-  margin: 4px 0 0;
-}
-
-.header-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: $traite-primary-light;
-  color: $traite-primary-dark;
-  font-size: 0.8rem;
-  font-weight: 600;
-  border-radius: 20px;
-}
-
-// ─── Layout deux colonnes ────────────────
-.traites-layout {
-  display: grid;
-  grid-template-columns: 420px 1fr;
-  gap: 24px;
-  padding: 24px 32px 32px;
-  align-items: start;
-}
-
-.traites-form-panel {
-  position: sticky;
-  top: 24px;
-}
-
-.traites-preview-panel {
-  min-height: 600px;
-}
+$traite-primary: #7c3aed;
+$traite-primary-dark: #6d28d9;
+$traite-primary-light: #ede9fe;
+$traite-primary-50: #f5f3ff;
+$traite-bg: #f8f7ff;
+$traite-card: #ffffff;
+$traite-border: #e9e5f5;
+$traite-text: #1e1b4b;
+$traite-text-secondary: #6b7280;
+$traite-text-muted: #9ca3af;
+$traite-success: #059669;
+$traite-success-bg: #ecfdf5;
+$traite-error: #dc2626;
+$traite-error-bg: #fef2f2;
+$traite-radius: 12px;
+$traite-radius-sm: 8px;
+$traite-shadow: 0 1px 3px rgba(124, 58, 237, 0.06), 0 1px 2px rgba(0,0,0,0.04);
+$traite-shadow-lg: 0 4px 16px rgba(124, 58, 237, 0.08), 0 2px 6px rgba(0,0,0,0.04);
 
 // ─── Formulaire ──────────────────────────
 .traite-form {
@@ -132,7 +73,7 @@
 }
 
 .field-group {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .field-row {
@@ -141,16 +82,12 @@
   gap: 12px;
 }
 
-.field-flex {
-  margin-bottom: 14px;
-}
-
 .field-label {
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
   color: $traite-text;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .field-input {
@@ -164,6 +101,7 @@
   outline: none;
   transition: all 0.2s ease;
   font-family: inherit;
+  box-sizing: border-box;
 
   &::placeholder {
     color: $traite-text-muted;
@@ -175,7 +113,6 @@
     box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
   }
 
-  // Supprime les flèches des number inputs
   &[type="number"] {
     -moz-appearance: textfield;
     &::-webkit-inner-spin-button,
@@ -184,9 +121,14 @@
       margin: 0;
     }
   }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 
-// Indicateur montant par traite
+// ─── Indicateur montant ───────────────────
 .amount-indicator {
   display: flex;
   align-items: center;
@@ -215,6 +157,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  margin-top: 4px;
 }
 
 .btn {
@@ -231,19 +174,19 @@
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+}
 
-  &-icon {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-  }
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .btn-primary {
   background: $traite-primary;
   color: #fff;
 
-  &:hover:not(.btn-disabled) {
+  &:hover:not(.btn-disabled):not(:disabled) {
     background: $traite-primary-dark;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
@@ -263,6 +206,11 @@
   &:hover:not(:disabled) {
     background: $traite-primary-50;
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 .btn-ghost {
@@ -270,12 +218,11 @@
   color: $traite-text-secondary;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(0,0,0,0.04);
     color: $traite-text;
   }
 }
 
-// Animation spinner
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -306,7 +253,7 @@
   border: 1px solid rgba(5, 150, 105, 0.15);
 }
 
-// Transition fade
+// ─── Transitions ─────────────────────────
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.25s ease;
@@ -316,257 +263,14 @@
   opacity: 0;
 }
 
-// ─── Aperçu (Preview) ────────────────────
-.traite-preview-wrapper {
-  background: $traite-card;
-  border-radius: $traite-radius;
-  border: 1px solid $traite-border;
-  box-shadow: $traite-shadow-lg;
-  overflow: hidden;
-}
-
-// État vide
-.preview-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 40px;
-  text-align: center;
-}
-
-.empty-icon-container {
-  width: 80px;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: $traite-primary-50;
-  border-radius: 50%;
-  margin-bottom: 20px;
-}
-
-.empty-icon {
-  width: 40px;
-  height: 40px;
-  color: $traite-primary;
-  opacity: 0.5;
-}
-
-.empty-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: $traite-text;
-  margin: 0;
-}
-
-.empty-subtitle {
-  font-size: 0.82rem;
-  color: $traite-text-muted;
-  margin: 6px 0 0;
-  line-height: 1.5;
-  max-width: 280px;
-}
-
-// Contenu aperçu
-.preview-content {
-  padding: 20px 24px 24px;
-}
-
-// Navigation
-.preview-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.nav-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  border: 1.5px solid $traite-border;
-  background: #fff;
-  color: $traite-text-secondary;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &:hover:not(:disabled) {
-    border-color: $traite-primary;
-    color: $traite-primary;
-    background: $traite-primary-50;
-  }
-
-  &:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-}
-
-.nav-btn-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.nav-pills {
-  display: flex;
-  gap: 6px;
-}
-
-.nav-pill {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  border: 1.5px solid transparent;
-  background: $traite-primary-50;
-  color: $traite-text-secondary;
-  font-size: 0.8rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &:hover {
-    border-color: $traite-primary;
-    color: $traite-primary;
-  }
-}
-
-.nav-pill-active {
-  background: $traite-primary;
-  color: #fff;
-  border-color: $traite-primary;
-}
-
-.preview-label {
-  text-align: center;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: $traite-primary-dark;
-  margin-bottom: 16px;
-}
-
-// ─── Document traite ─────────────────────
-.traite-document {
-  border-radius: $traite-radius-sm;
-  overflow: hidden;
-  border: 1px solid $traite-border;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.traite-overlay {
-  position: relative;
-  width: 100%;
-  // Ratio A4 approximatif (1:1.414)
-  padding-bottom: 141.4%;
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: top center;
-}
-
-.traite-field {
-  position: absolute;
-  font-family: 'Times New Roman', 'Georgia', serif;
-  color: #1a1a2e;
-  line-height: 1.3;
-  // Définir une taille de base qui sera proportionnelle
-  font-size: clamp(8px, 1.1vw, 14px);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 90%;
-}
-
-// Tailles spécifiques par type de champ
-.traite-field-numero {
-  font-size: clamp(9px, 1.2vw, 15px);
-  font-weight: 700;
-  font-family: 'Courier New', monospace;
-}
-
-.traite-field-montant-chiffres {
-  font-size: clamp(10px, 1.3vw, 16px);
-  font-weight: 700;
-}
-
-.traite-field-montant-lettres {
-  font-size: clamp(7px, 0.95vw, 12px);
-  font-style: italic;
-  white-space: normal;
-  max-width: 88%;
-  line-height: 1.5;
-}
-
-.traite-field-signature {
-  font-style: italic;
-  font-size: clamp(8px, 1vw, 13px);
-  color: #2d2d5e;
-}
-
-// ─── Info chips sous le document ─────────
-.preview-info {
-  display: flex;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.info-chip {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 10px 8px;
-  background: $traite-primary-50;
-  border-radius: $traite-radius-sm;
-}
-
-.info-chip-label {
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: $traite-text-muted;
-  margin-bottom: 3px;
-}
-
-.info-chip-value {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: $traite-text;
-}
-
 // ─── Responsive ──────────────────────────
 @media (max-width: 1024px) {
-  .traites-layout {
-    grid-template-columns: 1fr;
-    padding: 16px;
-  }
-
-  .traites-form-panel {
-    position: static;
-  }
-
-  .traites-header {
-    padding: 20px 16px 0;
-  }
-
   .field-row {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 640px) {
-  .traites-title {
-    font-size: 1.35rem;
-  }
-
   .form-body {
     padding: 16px;
   }
@@ -581,18 +285,5 @@
     .btn {
       width: 100%;
     }
-  }
-
-  .preview-content {
-    padding: 16px;
-  }
-
-  .preview-info {
-    flex-direction: column;
-  }
-
-  .nav-pills {
-    flex-wrap: wrap;
-    justify-content: center;
   }
 }

@@ -2,7 +2,7 @@
   <div class="auth-layout">
     <div class="left-panel">
       <TraityLogo :size="44" show-text class="mb-logo" />
-      <p class="left-tagline">Réinitialisez votre accès en toute sécurité</p>
+      <img src="@/assets/mdpoub.png" alt="Illustration réinitialisation" class="left-illustration" />
     </div>
     <div class="right-panel">
       <TraityLogo :size="28" show-text class="form-logo-wrap" />
@@ -45,4 +45,13 @@ async function handleForgot() {
 
 <style scoped lang="scss">
 @import '@/assets/styles/auth.scss';
+
+.left-illustration {
+  display: block;
+  max-width: 280px;
+  width: 100%;
+  margin-top: 2rem;
+  align-self: center;
+  opacity: 0.95;
+}
 </style>

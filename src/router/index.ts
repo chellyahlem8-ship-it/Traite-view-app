@@ -1,9 +1,9 @@
-// ✅ APRÈS
-import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/auth.store'
-import LoginView from '@/views/LoginView.vue'
-import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
-import TraitesView from '@/views/TraitesView.vue'
+import { createRouter, createWebHistory } from 'vue-router';
+import { useAuthStore } from '@/stores/auth.store';
+import LoginView from '@/views/LoginView.vue';
+import ForgotPasswordView from '@/views/ForgotPasswordView.vue';
+import TraitesView from '@/views/TraitesView.vue';
+import CreateTier from '@/views/tiers/CreateTier.vue'; // Import de la nouvelle vue
 
 const router = createRouter({
   history: createWebHistory(),
@@ -24,15 +24,23 @@ const router = createRouter({
       path: '/traites',
       name: 'Traites',
       component: TraitesView,
-      meta: { requiresAuth: true }
-    }
+      meta: { requiresAuth: true },
+    },
+    // ✅ AJOUT DE LA ROUTE TIERS
+    {
+      path: '/tiers/create',
+      name: 'CreateTier',
+      component: CreateTier,
+      meta: { requiresAuth: true },
+    },
   ],
-}) // ✅ PARENTHÈSE AJOUTÉE
+});
 
 router.beforeEach((to) => {
-  const auth = useAuthStore()
-  if (to.meta.requiresAuth && !auth.isAuthenticated) return '/login'
-  if (to.meta.guest && auth.isAuthenticated) return '/dashboard'
-})
+  const auth = useAuthStore();
+  if (to.meta.requiresAuth && !auth.isAuthenticated) return '/login';
+  if (to.meta.guest && auth.isAuthenticated) return '/dashboard';
+  return true;
+});
 
-export default router
+export default router;
