@@ -19,12 +19,13 @@
         <span class="nav-icon">👥</span> Tiers
       </router-link>
 
+      <router-link to="/banques/create" class="nav-item" active-class="active">
+        <span class="nav-icon">🏦</span> Banques
+      </router-link>
+
       <!-- ❌ Ceux-ci restent disabled car pas de route encore -->
       <button class="nav-item" disabled>
         <span class="nav-icon">💰</span> Trésorerie
-      </button>
-      <button class="nav-item" disabled>
-        <span class="nav-icon">🏦</span> Banques
       </button>
       <button class="nav-item" disabled>
         <span class="nav-icon">⚙️</span> Paramètres
