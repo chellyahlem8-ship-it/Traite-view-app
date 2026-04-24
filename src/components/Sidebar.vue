@@ -22,6 +22,9 @@
       <router-link to="/banques/create" class="nav-item" active-class="active">
         <span class="nav-icon">🏦</span> Banques
       </router-link>
+      <router-link to="/comptes-bancaires/create" class="nav-item" active-class="active">
+        <span class="nav-icon">🏦</span> Comptes bancaires
+      </router-link>
 
       <!-- ❌ Ceux-ci restent disabled car pas de route encore -->
       <button class="nav-item" disabled>

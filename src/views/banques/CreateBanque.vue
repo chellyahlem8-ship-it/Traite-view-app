@@ -1,6 +1,7 @@
 <template>
+<Sidebar />
   <div class="create-banque-page">
-
+    
     <!-- ── Toast success ──────────────────────────────────────────── -->
     <Transition name="toast">
       <div v-if="showSuccessToast" class="toast toast--success">
@@ -44,6 +45,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import Sidebar from '@/components/Sidebar.vue'
 import FormCreerBanque from '@/components/FormCreerBanque.vue'
 import type { BanqueFormData, BanqueFormErrors } from '@/components/FormCreerBanque.vue'
 import { useBanques } from '@/composables/useBanques'

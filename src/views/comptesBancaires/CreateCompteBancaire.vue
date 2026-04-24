@@ -1,4 +1,5 @@
 <template>
+<Sidebar />
   <div class="create-compte-page">
 
     <!-- ── Toast success ──────────────────────────────────────────── -->
@@ -48,6 +49,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import Sidebar from '@/components/Sidebar.vue'
 import FormCreerCompteBancaire from '@/components/FormCreerCompteBancaire.vue'
 import type {
   CompteBancaireFormData,
