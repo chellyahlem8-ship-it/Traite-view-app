@@ -5,6 +5,7 @@ import ForgotPasswordView from '@/views/ForgotPasswordView.vue';
 import TraitesView from '@/views/TraitesView.vue';
 import CreateTier from '@/views/tiers/CreateTier.vue'; // Import de la nouvelle vue
 import CreateBanque from '@/views/banques/CreateBanque.vue';
+import CreateCompteBancaire from '@/views/comptesBancaires/CreateCompteBancaire.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -39,6 +40,13 @@ const router = createRouter({
       path: '/banques/create',
       name: 'BanquesCreate',
       component: CreateBanque,
+      meta: { requiresAuth: true },
+    },
+
+    {
+      path: '/comptes-bancaires/create',
+      name: 'CreateCompteBancaire',
+      component: CreateCompteBancaire,
       meta: { requiresAuth: true },
     }
   ],
