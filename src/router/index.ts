@@ -3,7 +3,9 @@ import { useAuthStore } from '@/stores/auth.store';
 import LoginView from '@/views/LoginView.vue';
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue';
 import TraitesView from '@/views/TraitesView.vue';
-import CreateTier from '@/views/tiers/CreateTier.vue'; // Import de la nouvelle vue
+import TiersView from '@/views/tiers/TiersView.vue';
+import CreateTier from '@/views/tiers/CreateTier.vue';
+import EditTier from '@/views/tiers/EditTier.vue';
 import CreateBanque from '@/views/banques/CreateBanque.vue';
 import CreateCompteBancaire from '@/views/comptesBancaires/CreateCompteBancaire.vue'
 
@@ -28,14 +30,28 @@ const router = createRouter({
       component: TraitesView,
       meta: { requiresAuth: true },
     },
-    // ✅ AJOUT DE LA ROUTE TIERS
+
+    // ── TIERS ──────────────────────────────────────────────────
+    {
+      path: '/tiers',
+      name: 'Tiers',
+      component: TiersView,
+      meta: { requiresAuth: true },
+    },
     {
       path: '/tiers/create',
       name: 'CreateTier',
       component: CreateTier,
       meta: { requiresAuth: true },
     },
+    {
+      path: '/tiers/:id/edit',
+      name: 'EditTier',
+      component: EditTier,
+      meta: { requiresAuth: true },
+    },
 
+    // ── BANQUES ────────────────────────────────────────────────
     {
       path: '/banques/create',
       name: 'BanquesCreate',
@@ -43,6 +59,7 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
 
+    // ── COMPTES BANCAIRES ──────────────────────────────────────
     {
       path: '/comptes-bancaires/create',
       name: 'CreateCompteBancaire',

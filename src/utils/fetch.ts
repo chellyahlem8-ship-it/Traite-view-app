@@ -9,7 +9,7 @@ export async function apiFetch<T>(
   const url = `${API_URL}${endpoint}`;
 
   // Récupération du token (depuis localStorage ou store)
-  const token = localStorage.getItem('auth_token');
+  const token = localStorage.getItem('traity__token');
 
   // CORRECTION ICI :
   // On change le type de 'headers' de 'HeadersInit' vers 'Record<string, string>'.

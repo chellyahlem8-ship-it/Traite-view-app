@@ -12,8 +12,8 @@
         </svg>
       </div>
       <div>
-        <h2 class="form-title">Nouveau Tiers</h2>
-        <p class="form-subtitle">Enregistrez un client, fournisseur ou partenaire.</p>
+        <h2 class="form-title">{{ props.mode === 'edit' ? 'Modifier le Tiers' : 'Nouveau Tiers' }}</h2>
+        <p class="form-subtitle">{{ props.mode === 'edit' ? 'Modifiez les informations du tiers.' : 'Enregistrez un client, fournisseur ou partenaire.' }}</p>
       </div>
     </div>
 
@@ -178,7 +178,7 @@
                    0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                 clip-rule="evenodd" />
             </svg>
-            {{ loading ? 'Enregistrement…' : 'Créer le Tiers' }}
+            {{ loading ? 'Enregistrement…' : (props.mode === 'edit' ? 'Modifier le Tiers' : 'Créer le Tiers') }}
           </span>
         </button>
 
@@ -217,7 +217,7 @@ export interface TierFormData {
   email: string
   adresse: string
   num_tel: string
-  types_tiers_id: number | ''
+  types_tiers_id: number | string
 }
 
 /** Erreurs de validation par champ, fournies par le parent */
@@ -241,11 +241,14 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   /** Erreurs de validation par champ */
   errors?: TierFormErrors
+  /** 'create' (défaut) ou 'edit' — adapte le titre et le bouton */
+  mode?: 'create' | 'edit'
 }>(), {
   typesTiers: () => [],
   loadingTypes: false,
   loading: false,
   errors: () => ({}),
+  mode: 'create',
 })
 
 // ── Emits ─────────────────────────────────────────────────────────────

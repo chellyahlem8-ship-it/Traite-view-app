@@ -13,9 +13,7 @@
         <span class="nav-icon">📄</span> Traites
       </router-link>
 
-      <!-- ✅ AVANT : <button class="nav-item" disabled> -->
-      <!-- ✅ APRÈS : router-link vers la route qui existe maintenant -->
-      <router-link to="/tiers/create" class="nav-item" active-class="active">
+      <router-link to="/tiers" class="nav-item" active-class="active">
         <span class="nav-icon">👥</span> Tiers
       </router-link>
 
