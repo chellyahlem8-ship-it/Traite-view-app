@@ -8,7 +8,7 @@
         <h1 class="page-title">Tiers</h1>
       </div>
 
-      <!-- ── Statistiques rapides (style template_tableau) ─────── -->
+      <!-- ── Statistiques rapides ─────── -->
       <div class="stats-bar">
         <div class="stat-card">
           <span class="stat-icon">👥</span>
@@ -94,12 +94,12 @@
                   <span class="tier-type">{{ tier.type_tiers?.type ?? '' }}</span>
                 </td>
 
-                <!-- Compte bancaire -->
+                <!-- ✅ Compte bancaire — lu directement depuis tier.comptesBancaires -->
                 <td class="td-bank">
-                  <template v-if="getCompte(tier.id)">
-                    <span class="bank-name">{{ getCompte(tier.id)!.banque?.nomBanque }}</span>
-                    <span class="bank-rib">{{ getCompte(tier.id)!.rib }}</span>
-                  </template>
+                  <template v-if="tier.comptes_bancaires && tier.comptes_bancaires.length > 0">
+  <span class="bank-name">{{ tier.comptes_bancaires[0].banque?.nomBanque }}</span>
+  <span class="bank-rib">{{ tier.comptes_bancaires[0].rib }}</span>
+</template>
                   <span v-else class="no-data">—</span>
                 </td>
 
@@ -111,10 +111,7 @@
 
                 <!-- Action Edit -->
                 <td class="td-action">
-                  <button
-                    class="link-btn"
-                    @click.stop="editTier(tier.id)"
-                  >Modifier</button>
+                  <button class="link-btn" @click.stop="editTier(tier.id)">Modifier</button>
                 </td>
               </tr>
             </tbody>
@@ -135,16 +132,14 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import { tiersApi, type Tier } from '@/api/tiers.api'
-import { comptesBancairesApi, type CompteBancaire } from '@/api/comptesBancaires.api'
 
 const router = useRouter()
 
 // ── État ─────────────────────────────────────────────────────
-const tiers    = ref<Tier[]>([])
-const comptes  = ref<CompteBancaire[]>([])
-const loading  = ref(false)
-const toastMsg = ref<string | null>(null)
-const toastType = ref<'success' | 'error'>('success')
+const tiers         = ref<Tier[]>([])
+const loading       = ref(false)
+const toastMsg      = ref<string | null>(null)
+const toastType     = ref<'success' | 'error'>('success')
 const selectedTierId = ref<number | null>(null)
 
 // ── Stats rapides ────────────────────────────────────────────
@@ -153,37 +148,15 @@ const tiersFournisseurs = computed(() => tiers.value.filter(t => t.type_tiers?.t
 
 // ── Helpers ──────────────────────────────────────────────────
 function initiales(nom: string): string {
-  return nom
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
-
-function getCompte(tierId: number): CompteBancaire | undefined {
-  return comptes.value.find(
-    c => c.titulaire_id === tierId && c.titulaire_type === 'App\\Models\\Tier'
-  )
+  return nom.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
 // ── Chargement ───────────────────────────────────────────────
 async function fetchAll() {
   loading.value = true
   try {
-    // ✅ FIX : on charge les tiers en premier, séparément des comptes
-    // Comme ça si les comptes bancaires plantent, les tiers s'affichent quand même
     const tiersRes = await tiersApi.getAll()
     tiers.value = tiersRes.data
-
-    try {
-      const comptesRes = await comptesBancairesApi.getAll()
-      comptes.value = comptesRes.data
-    } catch {
-      // Les comptes ne sont pas critiques, on continue sans
-      comptes.value = []
-    }
-
   } catch {
     showToast('Erreur lors du chargement des tiers.', 'error')
   } finally {
@@ -203,19 +176,9 @@ function selectTier(id: number) {
 }
 
 // ── Navigation ───────────────────────────────────────────────
-function goCreate() {
-  router.push({ name: 'CreateTier' })
-}
-
-function goEdit() {
-  if (selectedTierId.value) {
-    router.push({ name: 'EditTier', params: { id: selectedTierId.value } })
-  }
-}
-
-function editTier(id: number) {
-  router.push({ name: 'EditTier', params: { id } })
-}
+function goCreate() { router.push({ name: 'CreateTier' }) }
+function goEdit()   { if (selectedTierId.value) router.push({ name: 'EditTier', params: { id: selectedTierId.value } }) }
+function editTier(id: number) { router.push({ name: 'EditTier', params: { id } }) }
 
 onMounted(fetchAll)
 </script>
@@ -239,6 +202,11 @@ onMounted(fetchAll)
   display: flex;
   flex-direction: column;
   gap: 24px;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    padding: 80px 16px 24px;
+  }
 }
 
 /* ── Header ─────────────────────────────────────────────────── */
@@ -259,6 +227,7 @@ onMounted(fetchAll)
 .stats-bar {
   display: flex;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .stat-card {
@@ -383,9 +352,7 @@ onMounted(fetchAll)
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Tableau ─────────────────────────────────────────────────── */
-.table-wrapper {
-  overflow-x: auto;
-}
+.table-wrapper { overflow-x: auto; }
 
 .tiers-table {
   width: 100%;
@@ -446,32 +413,13 @@ onMounted(fetchAll)
 
 .td-name {
   display: table-cell;
-  .tier-name {
-    display: block;
-    font-weight: 600;
-    color: #1e1b4b;
-  }
-  .tier-type {
-    display: block;
-    font-size: 12px;
-    color: #9ca3af;
-    margin-top: 2px;
-  }
+  .tier-name { display: block; font-weight: 600; color: #1e1b4b; }
+  .tier-type { display: block; font-size: 12px; color: #9ca3af; margin-top: 2px; }
 }
 
 .td-bank {
-  .bank-name {
-    display: block;
-    font-weight: 500;
-    color: #374151;
-  }
-  .bank-rib {
-    display: block;
-    font-size: 12px;
-    color: #9ca3af;
-    font-family: monospace;
-    margin-top: 2px;
-  }
+  .bank-name { display: block; font-weight: 500; color: #374151; }
+  .bank-rib  { display: block; font-size: 12px; color: #9ca3af; font-family: monospace; margin-top: 2px; }
 }
 
 .no-data { color: #d1d5db; }

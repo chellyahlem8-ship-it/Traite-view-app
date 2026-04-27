@@ -4,7 +4,7 @@ export interface CompteBancaire {
   adresse_agence: string
   banque_id: number
   titulaire_id: number
-  titulaire_type: string // 'App\\Models\\Tiers' | 'App\\Models\\Societe'
+  titulaire_type: string // 'App\\Models\\Tier' | 'App\\Models\\Societe'
   banque?: { id: number; nomBanque: string }
   titulaire?: Record<string, unknown>
   created_at?: string

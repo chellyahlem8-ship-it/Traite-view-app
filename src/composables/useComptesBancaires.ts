@@ -15,7 +15,7 @@ export interface SelectOption {
 
 /** Labels affichés vs valeurs envoyées au backend */
 export const TITULAIRE_TYPES = [
-  { value: 'App\\Models\\Tiers',   label: 'Tiers'    },
+  { value: 'App\\Models\\Tier',   label: 'Tiers'    },
   { value: 'App\\Models\\Societe', label: 'Société'  },
 ] as const
 
@@ -79,7 +79,7 @@ export function useComptesBancaires() {
       generalError.value      = null
 
       try {
-        if (type === 'App\\Models\\Tiers') {
+        if (type === 'App\\Models\\Tier') {
           const res = await tiersApi.getAll()
           titulaires.value = res.data.map((t) => ({
             id:    t.id,

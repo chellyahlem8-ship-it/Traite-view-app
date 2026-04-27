@@ -107,8 +107,13 @@ function handleCancel() {
   align-items: center;
   justify-content: center;
   padding: 32px 16px;
+  padding-left: calc(240px + 16px); /* sidebar width + gap */
   background: #f8f7ff;
   position: relative;
+
+  @media (max-width: 768px) {
+    padding: 80px 16px 32px;
+  }
 }
 
 /* ── Toasts ────────────────────────────────────────────────────────── */

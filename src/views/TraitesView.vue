@@ -53,6 +53,11 @@ const { traites } = useTraite()
 .traites-main {
   margin-left: 240px;
   flex: 1;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    padding-top: 64px; /* espace pour hamburger */
+  }
 }
 
 .traites-header {

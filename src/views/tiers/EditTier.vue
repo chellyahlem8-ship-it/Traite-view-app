@@ -60,12 +60,14 @@ import type { TierFormData, TypeTierOption, TierFormErrors } from '@/components/
 import { tiersApi, typesTiersApi } from '@/api/tiers.api'
 import { useAuthStore } from '@/stores/auth.store'
 
-const router = useRouter()
-const route  = useRoute()
+const router    = useRouter()
+const route     = useRoute()
 const authStore = useAuthStore()
 
 const tierId = Number(route.params.id)
-const currentSocieteId = authStore.user?.idSociete ?? 0
+
+// idSociete sera récupéré depuis le tiers chargé (source fiable même après refresh)
+let resolvedSocieteId = 0
 
 // ── États ─────────────────────────────────────────────────────
 const formState = ref<TierFormData>({
@@ -90,17 +92,24 @@ onMounted(async () => {
   loadingTypes.value = true
 
   try {
-    // Charger en parallèle : les types de tiers + le tiers à modifier
     const [typesRes, tierRes] = await Promise.all([
       typesTiersApi.getAll(),
       tiersApi.getOne(tierId),
     ])
 
-    // Remplir le select des types
     typesTiers.value = typesRes.data.map((t: any) => ({ id: t.id, label: t.type }))
 
-    // Pré-remplir le formulaire avec les données du tiers
     const t = tierRes.data
+
+    // ✅ Récupère idSociete depuis le tiers lui-même (fiable même après refresh de page)
+    // Fallback 1 : store Pinia (si l'utilisateur n'a pas rechargé)
+    // Fallback 2 : token JWT décodé (payload.idSociete)
+    resolvedSocieteId =
+      t.idSociete ||
+      authStore.user?.idSociete ||
+      getSocieteIdFromToken() ||
+      0
+
     formState.value = {
       raison_sociale: t.raison_sociale,
       email:          t.email,
@@ -115,6 +124,21 @@ onMounted(async () => {
     loadingTypes.value = false
   }
 })
+
+/**
+ * Décode le JWT stocké et extrait idSociete du payload.
+ * Utile si authStore.user est null après un rechargement de page.
+ */
+function getSocieteIdFromToken(): number | null {
+  try {
+    const token = localStorage.getItem('traity_token')
+    if (!token) return null
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.idSociete ?? payload.id_societe ?? null
+  } catch {
+    return null
+  }
+}
 
 // ── Validation ────────────────────────────────────────────────
 function validate(): boolean {
@@ -165,13 +189,12 @@ async function handleSubmit() {
       adresse:         formState.value.adresse,
       num_tel:         Number(formState.value.num_tel),
       types_tiers_id:  Number(formState.value.types_tiers_id),
-      idSociete:       currentSocieteId,
+      idSociete:       resolvedSocieteId,
     }
 
     await tiersApi.update(tierId, payload)
     success.value = true
 
-    // Rediriger vers la liste après 1.5s
     setTimeout(() => {
       router.push({ name: 'Tiers' })
     }, 1500)
@@ -206,9 +229,13 @@ function goBack() {
   padding: 40px 24px;
   gap: 16px;
   overflow-y: auto;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    padding: 80px 16px 24px;
+  }
 }
 
-/* Loader */
 .loader-center {
   display: flex;
   align-items: center;
@@ -230,7 +257,6 @@ function goBack() {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Toasts */
 .toast {
   display: flex;
   align-items: center;
@@ -263,7 +289,6 @@ function goBack() {
 }
 .toast-close:hover { opacity: 1; background: rgba(0,0,0,0.06); }
 
-/* Transitions */
 .slide-down-enter-active,
 .slide-down-leave-active { transition: all 0.25s ease; }
 .slide-down-enter-from,

@@ -203,6 +203,7 @@ function resetForm() {
 
 .page-content {
   flex: 1;
+  margin-left: 240px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -271,9 +272,15 @@ function resetForm() {
 }
 
 /* ── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .page-content {
+    margin-left: 0;
+    padding: 80px 16px 24px;
+  }
+}
 @media (max-width: 600px) {
   .page-content {
-    padding: 16px 0;
+    padding: 80px 0 24px;
   }
 }
 </style>
