@@ -1,12 +1,12 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { comptesBancairesApi } from '@/api/comptesBancaires.api'
-import { banquesApi } from '@/api/banques.api'
-import { tiersApi } from '@/api/tiers.api'
-import { apiGet } from '@/api/apiClient'
-import type { Banque } from '@/types/banques'
+import { banquesApi }          from '@/api/banques.api'
+import { tiersApi }            from '@/api/tiers.api'
+import { apiGet }              from '@/api/apiClient'
+import type { Banque }         from '@/types/banques'
 
 export interface SelectOption {
-  id: number
+  id:    number
   label: string
 }
 
@@ -14,6 +14,9 @@ export const TITULAIRE_TYPES = [
   { value: 'App\\Models\\Tier',    label: 'Tiers'   },
   { value: 'App\\Models\\Societe', label: 'Société' },
 ] as const
+
+// ── Constante RIB ─────────────────────────────────────────────────────
+const RIB_LENGTH = 20
 
 interface FormErrors {
   rib?:            string
@@ -24,10 +27,10 @@ interface FormErrors {
 }
 
 export function useComptesBancaires() {
-  const loading       = ref(false)
-  const success       = ref(false)
-  const generalError  = ref<string | null>(null)
-  const errors        = reactive<FormErrors>({})
+  const loading      = ref(false)
+  const success      = ref(false)
+  const generalError = ref<string | null>(null)
+  const errors       = reactive<FormErrors>({})
 
   const banques           = ref<Banque[]>([])
   const loadingBanques    = ref(false)
@@ -35,13 +38,14 @@ export function useComptesBancaires() {
   const loadingTitulaires = ref(false)
 
   const formState = reactive({
-    rib:            '',
+    rib:            '',   // toujours stocké en chiffres bruts (sans espaces)
     adresse_agence: '',
     banque_id:      '' as number | '',
     titulaire_type: '',
     titulaire_id:   '' as number | '',
   })
 
+  // ── Chargement des banques au montage ──────────────────────────────
   onMounted(async () => {
     loadingBanques.value = true
     try {
@@ -54,6 +58,7 @@ export function useComptesBancaires() {
     }
   })
 
+  // ── Chargement des titulaires selon le type ────────────────────────
   watch(
     () => formState.titulaire_type,
     async (type) => {
@@ -73,9 +78,7 @@ export function useComptesBancaires() {
             label: t.raison_sociale,
           }))
         } else if (type === 'App\\Models\\Societe') {
-          // ✅ FIX : SocieteController retourne un tableau direct (pas { success, data })
-          // et le champ s'appelle raisonSociale (pas nom_societe)
-          const res = await apiGet<any>('societes')
+          const res  = await apiGet<any>('societes')
           const list: any[] = Array.isArray(res) ? res : (res?.data ?? [])
           titulaires.value = list.map((s: any) => ({
             id:    s.idSociete ?? s.id,
@@ -90,6 +93,7 @@ export function useComptesBancaires() {
     }
   )
 
+  // ── Nettoyage des erreurs ──────────────────────────────────────────
   const clearErrors = () => {
     ;(Object.keys(errors) as Array<keyof FormErrors>).forEach((key) => {
       delete errors[key]
@@ -97,14 +101,22 @@ export function useComptesBancaires() {
     generalError.value = null
   }
 
+  // ── Validation ────────────────────────────────────────────────────
+  // Le RIB est stocké en chiffres bruts → on valide directement sur la longueur
   const validate = (): boolean => {
     clearErrors()
     let isValid = true
 
-    if (!formState.rib.trim()) {
+    // RIB : obligatoire + exactement 20 chiffres
+    const ribRaw = formState.rib.replace(/\D/g, '')
+    if (!ribRaw) {
       errors.rib = 'Le RIB est requis.'
       isValid = false
+    } else if (ribRaw.length !== RIB_LENGTH) {
+      errors.rib = `Le RIB doit contenir exactement ${RIB_LENGTH} chiffres (${ribRaw.length}/${RIB_LENGTH} saisis).`
+      isValid = false
     }
+
     if (!formState.adresse_agence.trim()) {
       errors.adresse_agence = "L'adresse de l'agence est requise."
       isValid = false
@@ -125,6 +137,7 @@ export function useComptesBancaires() {
     return isValid
   }
 
+  // ── Création du compte bancaire ───────────────────────────────────
   const createCompteBancaire = async () => {
     if (!validate()) return
 
@@ -134,7 +147,7 @@ export function useComptesBancaires() {
 
     try {
       const payload = {
-        rib:            formState.rib.trim(),
+        rib:            formState.rib.replace(/\D/g, ''), // on envoie les 20 chiffres bruts
         adresse_agence: formState.adresse_agence.trim(),
         banque_id:      Number(formState.banque_id),
         titulaire_type: formState.titulaire_type,
@@ -162,6 +175,7 @@ export function useComptesBancaires() {
     }
   }
 
+  // ── Réinitialisation ──────────────────────────────────────────────
   const resetForm = () => {
     formState.rib            = ''
     formState.adresse_agence = ''
