@@ -106,10 +106,7 @@
                 <span v-else>SE CONNECTER</span>
               </button>
             </form>
-            <p class="register-link">
-              Pas encore de compte ?
-              <RouterLink to="/register">Créer un compte</RouterLink>
-            </p>
+            
           </div>
         </Transition>
 

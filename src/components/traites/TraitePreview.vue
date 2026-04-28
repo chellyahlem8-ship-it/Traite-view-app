@@ -26,81 +26,47 @@
         <div class="traite-overlay">
           <img :src="traiteBg" class="traite-bg-img" alt="Lettre de change" />
 
-          <!-- ══════════════════════════════════════
-               ZONE HAUTE - Première ligne de données
-               ══════════════════════════════════════ -->
-
-          <!-- Numéro traite (haut droite, rouge) - aligné avec le cadre -->
+          <!-- Numéro traite (haut droite, rouge) -->
           <span class="tf tf-numero" style="top:8.5%; left:61%;">{{ D.numero }}</span>
 
-          <!-- Date d'échéance — après "Echéance الأجل" -->
+          <!-- Date d'échéance -->
           <span class="tf tf-date" style="top:15.8%; left:30%;">{{ D.dateEcheance ? fmt(D.dateEcheance) : '' }}</span>
 
-          <!-- Lieu d'émission — après "Le / في" -->
+          <!-- Lieu d'émission -->
           <span class="tf tf-lieu" style="top:12%; left:50%;">{{ D.lieu }}</span>
 
-          <!-- Date d'émission — après le lieu -->
+          <!-- Date d'émission -->
           <span class="tf tf-date" style="top:17%; left:50%;">{{ D.dateEmission ? fmt(D.dateEmission) : '' }}</span>
 
-          <!-- Montant en chiffres — après "المبلغ Montant" -->
+          <!-- Montant en chiffres -->
           <span class="tf tf-montant-chiffres" style="top:25%; left:79%;">{{ D.montant ? D.montant.toFixed(3) : '' }}</span>
 
-          <!-- ══════════════════════════════════════
-               LIGNE 2 : RIB du Tiré (Banque + RIB)
-               ══════════════════════════════════════ -->
-          <span class="tf tf-banque" style="top:23.5%; left:5%;  max-width:15%;">{{ D.banqueNom }}</span>
-          <span class="tf tf-rib"    style="top:23.5%; left:35%; max-width:38%;">{{ D.rib }}</span>
+          <!-- RIB du Tiré (corps principal) -->
+          <span class="tf tf-rib" style="top:23.5%; left:29.9%; max-width:38%;">{{ fmtRib(D.rib) }}</span>
 
-          <!-- ══════════════════════════════════════
-               LIGNE 3 : "Contre cette lettre de change..." + Tireur
-               ══════════════════════════════════════ -->
+          <!-- Tireur -->
           <span class="tf tf-nom" style="top:35%; left:10%; max-width:18%;">{{ nomTireur }}</span>
 
-          <!-- ══════════════════════════════════════
-               LIGNE 4 : "Veuillez payer à l'ordre de..." + Bénéficiaire
-               ══════════════════════════════════════ -->
+          <!-- Bénéficiaire -->
           <span class="tf tf-nom" style="top:36.5%; left:37%; max-width:28%;">{{ nomBeneficiaire }}</span>
 
-          <!-- Montant chiffres 2e occurrence (à droite) -->
+          <!-- Montant chiffres 2e occurrence -->
           <span class="tf tf-montant-chiffres" style="top:38%; left:85%;">{{ D.montant ? D.montant.toFixed(3) : '' }}</span>
 
-          <!-- ══════════════════════════════════════
-               LIGNE 5 : Montant en lettres
-               "La somme de / المبلغ المذكور"
-               ══════════════════════════════════════ -->
+          <!-- Montant en lettres -->
           <span class="tf tf-montant-lettres" style="top:47%; left:15%; max-width:70%;">{{ D.montantLettres }}</span>
 
-          <!-- ══════════════════════════════════════
-               TALON - LIGNE 1 : Lieu, dates, bénéficiaire, montant
-               ══════════════════════════════════════ -->
+          <!-- TALON - LIGNE 1 -->
           <span class="tf tf-small" style="top:55.5%; left:7%;  max-width:10%;">{{ D.lieu }}</span>
           <span class="tf tf-small" style="top:55.5%; left:20%;">{{ D.dateEmission ? fmt(D.dateEmission) : '' }}</span>
           <span class="tf tf-small" style="top:55.5%; left:35%;">{{ D.dateEcheance ? fmt(D.dateEcheance) : '' }}</span>
 
-          
-
-          <!-- ══════════════════════════════════════
-               TALON - LIGNE 2 : RIB + Domiciliation (Banque)
-               ══════════════════════════════════════ -->
-          <span class="tf tf-rib"   style="top:63.5%; left:2%;  max-width:35%;">{{ D.rib }}</span>
+          <!-- TALON - LIGNE 2 : RIB + Banque -->
+          <span class="tf tf-rib" style="top:63.5%; left:3%; max-width:35%;">{{ fmtRib(D.rib) }}</span>
           <span class="tf tf-small" style="top:63.5%; left:74%; max-width:22%;">{{ D.banqueNom }}</span>
 
-          <!-- ══════════════════════════════════════
-               TALON - LIGNE 3 : Nom et adresse du Tiré
-               "Tiré / المسحوب عليه"
-               ══════════════════════════════════════ -->
-          
-
-          <!-- ══════════════════════════════════════
-               TALON BAS : Signatures
-               ══════════════════════════════════════ -->
-
           <!-- Zone "Accepté" - nom du Tiré -->
-          <span class="tf tf-small"     style="bottom:25%; left:55%;  max-width:15%;">{{ nomTire }}</span>
-
-          <!-- Zone "Signature du tireur" -->
-          
-
+          <span class="tf tf-small" style="bottom:25%; left:55%; max-width:15%;">{{ nomTire }}</span>
         </div>
       </div>
 
@@ -141,7 +107,7 @@
       </div>
       <div class="info-chip">
         <span class="info-chip-label">RIB</span>
-        <span class="info-chip-value rib-chip">{{ D.rib || '—' }}</span>
+        <span class="info-chip-value rib-chip">{{ fmtRib(D.rib) || '—' }}</span>
       </div>
       <div class="info-chip">
         <span class="info-chip-label">Type</span>
@@ -163,6 +129,16 @@ function fmt(iso: string): string {
   if (!iso) return '';
   const [y, m, d] = iso.split('-');
   return `${d}/${m}/${y}`;
+}
+
+/**
+ * Formate un RIB tunisien de 20 chiffres en groupes : XX XXX XXXXXXXXXXXXXXX XX
+ */
+function fmtRib(raw: string | undefined | null): string {
+  if (!raw) return '';
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length !== 20) return raw;
+  return `${digits.slice(0,2)} ${digits.slice(2,5)} ${digits.slice(5,18)} ${digits.slice(18,20)}`;
 }
 
 function todayStr(): string {
@@ -220,69 +196,152 @@ const hasAnyData = computed(() =>
   padding: 20px 24px 24px;
 }
 
-/* Navigation */
-.preview-nav { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:12px; }
+/* ── Navigation ─────────────────────────────────── */
+.preview-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
 .nav-btn {
-  display:flex; align-items:center; justify-content:center;
-  width:34px; height:34px; border-radius:8px;
-  border:1.5px solid #e9e5f5; background:#fff; color:#6b7280;
-  cursor:pointer; transition:all .15s ease;
-  &:hover:not(:disabled) { border-color:#7c3aed; color:#7c3aed; background:#f5f3ff; }
-  &:disabled { opacity:.35; cursor:not-allowed; }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1.5px solid #e9e5f5;
+  background: #fff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all .15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: #7c3aed;
+    color: #7c3aed;
+    background: #f5f3ff;
+  }
+  &:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+  }
 }
-.nav-btn-icon { width:16px; height:16px; }
-.nav-pills { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+.nav-btn-icon { width: 16px; height: 16px; }
+.nav-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 .nav-pill {
-  width:32px; height:32px; display:flex; align-items:center; justify-content:center;
-  border-radius:8px; border:1.5px solid transparent; background:#f5f3ff;
-  color:#6b7280; font-size:.8rem; font-weight:600; font-family:inherit;
-  cursor:pointer; transition:all .15s ease;
-  &:hover { border-color:#7c3aed; color:#7c3aed; }
-  &-active { background:#7c3aed; color:#fff; border-color:#7c3aed; }
-}
-.preview-label { text-align:center; font-size:.8rem; font-weight:600; color:#6d28d9; margin-bottom:12px; }
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  background: #f5f3ff;
+  color: #6b7280;
+  font-size: .8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all .15s ease;
 
-/* Document */
-.traite-document-wrapper { position:relative; }
+  &:hover { border-color: #7c3aed; color: #7c3aed; }
+  &-active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+}
+.preview-label {
+  text-align: center;
+  font-size: .8rem;
+  font-weight: 600;
+  color: #6d28d9;
+  margin-bottom: 12px;
+}
+
+/* ── Document wrapper ───────────────────────────── */
+.traite-document-wrapper { position: relative; }
 .traite-document {
-  border-radius:8px; overflow:hidden;
-  border:1px solid #e9e5f5;
-  box-shadow:0 2px 12px rgba(0,0,0,.12);
-  background:#f8f8f8;
-}
-.traite-overlay {
-  position:relative; width:100%; aspect-ratio:926/607;
-  overflow:hidden; display:block;
-}
-.traite-bg-img {
-  position:absolute; top:0; left:0; width:100%; height:100%;
-  object-fit:fill; display:block; user-select:none; pointer-events:none;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e9e5f5;
+  box-shadow: 0 2px 12px rgba(0,0,0,.12);
+  background: #f8f8f8;
 }
 
-/* Hint */
+/* ── Overlay principal ──────────────────────────── */
+/*
+  Principe responsive :
+  - L'overlay a un aspect-ratio fixe (926/607) → sa hauteur suit sa largeur.
+  - font-size: 1.5% → 1.5% de la LARGEUR du conteneur parent.
+    (En CSS, % sur font-size est relatif à la largeur du parent pour les
+     éléments en position absolute à l'intérieur d'un bloc.)
+    Ex. : conteneur 400px → base 6px | 700px → 10.5px | 1000px → 15px
+  - Tous les .tf-* utilisent des `em` relatifs à cette base.
+  - top/left/bottom/max-width en % → relatifs aux dimensions de l'overlay.
+  - Aucun pixel ni vw sur les éléments positionnés.
+*/
+.traite-overlay {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 926 / 607;
+  overflow: hidden;
+  display: block;
+  font-size: 80%; /* base responsive : 2.2% de la largeur du conteneur */
+}
+
+.traite-bg-img {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: fill;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ── Hint overlay ───────────────────────────────── */
 .preview-hint-overlay {
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  background:rgba(255,255,255,.45); backdrop-filter:blur(1.5px);
-  border-radius:8px; pointer-events:none;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.45);
+  backdrop-filter: blur(1.5px);
+  border-radius: 8px;
+  pointer-events: none;
 }
 .preview-hint-box {
-  display:flex; align-items:center; gap:8px; padding:10px 18px;
-  background:rgba(124,58,237,.9); color:#fff; font-size:.82rem; font-weight:600;
-  border-radius:30px; box-shadow:0 4px 16px rgba(124,58,237,.35); white-space:nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(124,58,237,.9);
+  color: #fff;
+  font-size: .82rem;
+  font-weight: 600;
+  border-radius: 30px;
+  box-shadow: 0 4px 16px rgba(124,58,237,.35);
+  white-space: nowrap;
 }
-.hint-icon { width:16px; height:16px; flex-shrink:0; }
+.hint-icon { width: 16px; height: 16px; flex-shrink: 0; }
 
 /* ══════════════════════════════════════════════════
-   CHAMPS POSITIONNÉS SUR LE DOCUMENT
+   CHAMPS POSITIONNÉS — ZÉRO PIXEL, 100% RESPONSIVE
+   Toutes les tailles sont en `em` relatifs à la
+   font-size de .traite-overlay (= 1.5% du conteneur).
    ══════════════════════════════════════════════════ */
+
 .tf {
   position: absolute;
   font-family: 'Arial', 'Helvetica', sans-serif;
   color: #00008B;
   font-weight: 600;
   line-height: 1.2;
-  font-size: clamp(5px, 1.08vw, 11.5px);
+  font-size: 1em;        /* = 2.2% de la largeur du conteneur */
   white-space: nowrap;
   overflow: visible;
   pointer-events: none;
@@ -290,27 +349,27 @@ const hasAnyData = computed(() =>
 
 .tf-numero {
   font-family: 'Courier New', monospace !important;
-  font-size: clamp(6px, 1.1vw, 12px) !important;
+  font-size: 1.05em !important;
   font-weight: 700;
   color: #8B0000;
-  letter-spacing: .5px;
+  letter-spacing: 0.03em;
 }
 
 .tf-date {
   font-family: 'Courier New', monospace !important;
-  font-size: clamp(5px, .92vw, 10px) !important;
+  font-size: 0.9em !important;
   color: #00008B;
   font-weight: 700;
 }
 
 .tf-montant-chiffres {
-  font-size: clamp(6px, 1vw, 11px) !important;
+  font-size: 0.95em !important;
   font-weight: 800;
   color: #00008B;
 }
 
 .tf-montant-lettres {
-  font-size: clamp(4px, .72vw, 8px) !important;
+  font-size: 0.79em !important;
   font-style: italic;
   font-weight: 600;
   white-space: normal;
@@ -320,13 +379,15 @@ const hasAnyData = computed(() =>
 
 .tf-rib {
   font-family: 'Courier New', monospace !important;
-  letter-spacing: .3px;
-  font-size: clamp(4px, .78vw, 8.5px) !important;
+  letter-spacing: 0.09em;
+  word-spacing: 3.1em;   /* em au lieu de px fixe → scale avec la taille */
+  font-size: 0.85em !important;
+  font-weight: 700;
   color: #000080;
 }
 
 .tf-nom {
-  font-size: clamp(5px, .88vw, 10px) !important;
+  font-size: 1em !important;
   font-weight: 700;
   color: #00008B;
   white-space: normal;
@@ -334,57 +395,82 @@ const hasAnyData = computed(() =>
 }
 
 .tf-banque {
-  font-size: clamp(4.5px, .8vw, 9px) !important;
+  font-size: 7em !important;
   font-weight: 600;
   white-space: normal;
   color: #000080;
 }
 
 .tf-lieu {
-  font-size: clamp(5px, .88vw, 10px) !important;
+  font-size: 1.05em !important;
   font-weight: 600;
   color: #000080;
 }
 
 .tf-small {
-  font-size: clamp(3.5px, .66vw, 7.5px) !important;
+  font-size: 0.9em !important;
   font-weight: 500;
   white-space: nowrap;
   color: #000080;
 }
 
 .tf-signature {
-  font-style: italic;
-  font-size: clamp(4.5px, .8vw, 9px) !important;
+  font-size: 0.78em !important;
   font-weight: 600;
   color: #000080;
 }
 
-/* Chips résumé */
-.preview-info { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
-.info-chip {
-  flex:1; min-width:80px; display:flex; flex-direction:column;
-  align-items:center; padding:10px 8px; background:#f5f3ff; border-radius:8px;
+/* ── Chips résumé ───────────────────────────────── */
+.preview-info {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
 }
-.info-chip-label { font-size:.65rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:3px; }
+.info-chip {
+  flex: 1;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 8px;
+  background: #f5f3ff;
+  border-radius: 8px;
+}
+.info-chip-label {
+  font-size: .65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #9ca3af;
+  margin-bottom: 3px;
+}
 .info-chip-value {
-  font-size:.82rem; font-weight:700; color:#1e1b4b; text-align:center;
-  &.rib-chip { font-family:'Courier New',monospace; font-size:.72rem; letter-spacing:.5px; }
+  font-size: .82rem;
+  font-weight: 700;
+  color: #1e1b4b;
+  text-align: center;
+
+  &.rib-chip {
+    font-family: 'Courier New', monospace;
+    font-size: .72rem;
+    letter-spacing: .5px;
+  }
 }
 
 .info-chip-role {
   border: 1.5px solid transparent;
-  .info-chip-label { font-size:.6rem; letter-spacing:.08em; }
+  .info-chip-label { font-size: .6rem; letter-spacing: .08em; }
 }
 .info-chip-tireur {
   background: #fef3c7;
-  border-color: rgba(217, 119, 6, 0.25);
+  border-color: rgba(217,119,6,.25);
   .info-chip-label { color: #b45309; }
   .info-chip-value { color: #92400e; }
 }
 .info-chip-tire {
   background: #dbeafe;
-  border-color: rgba(59, 130, 246, 0.25);
+  border-color: rgba(59,130,246,.25);
   .info-chip-label { color: #1d4ed8; }
   .info-chip-value { color: #1e3a5f; }
 }

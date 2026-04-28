@@ -66,30 +66,33 @@ const closeSidebar = () => { isOpen.value = false }
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 /* ── Bouton hamburger ─────────────────────────────────────────── */
+/* ── Bouton hamburger ─────────────────────────────────────────── */
 .hamburger-btn {
-  display: none;
+  display: none; /* ← MASQUÉ PAR DÉFAUT SUR DESKTOP */
   position: fixed;
-  top: 16px;
+  top: 0;
   left: 16px;
-  z-index: 300;
+  z-index: 99999; /* ← Z-INDEX PLUS ÉLEVÉ */
   background: #4c1d95;
   border: none;
-  border-radius: 10px;
-  width: 42px;
-  height: 42px;
+  border-radius: 0 0 10px 10px;
+  width: 48px; /* ← PLUS GRAND POUR ÊTRE PLUS FACILE À CLIQUER */
+  height: 48px;
   cursor: pointer;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 5px;
   padding: 0;
-  box-shadow: 0 2px 12px rgba(76, 29, 149, 0.4);
+  box-shadow: 0 4px 16px rgba(76, 29, 149, 0.5);
+  /* Pour s'assurer qu'il est bien au-dessus de tout */
+  isolation: isolate;
 }
 
 .hamburger-line {
   display: block;
-  width: 20px;
-  height: 2px;
+  width: 22px;
+  height: 2.5px;
   background: #fff;
   border-radius: 2px;
   transition: all 0.25s ease;
@@ -98,6 +101,32 @@ const closeSidebar = () => { isOpen.value = false }
   &.open:nth-child(1) { transform: translateY(7px) rotate(45deg); }
   &.open:nth-child(2) { opacity: 0; transform: scaleX(0); }
   &.open:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hamburger-btn {
+    display: flex; /* ← AFFICHÉ SEULEMENT SUR MOBILE */
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+
+    &.sidebar--open {
+      transform: translateX(0);
+    }
+  }
+}
+
+/* Pour les appareils avec encoche (notch) - iPhone etc. */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .hamburger-btn {
+    top: env(safe-area-inset-top);
+  }
 }
 
 /* ── Overlay ──────────────────────────────────────────────────── */
