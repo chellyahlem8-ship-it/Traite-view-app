@@ -51,18 +51,22 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 /** GET /api/<endpoint> */
 export async function apiGet<T>(endpoint: string, params?: Record<string, string | number | boolean>): Promise<T> {
-  let url = `${BASE_URL}/${endpoint}`
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
+
+  let url = `${BASE_URL}/${cleanEndpoint}`
+
   if (params) {
-    // Ajoute les query params (?key=value&...) si fournis
     const qs = new URLSearchParams(
       Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))
     ).toString()
     url += `?${qs}`
   }
+
   const res = await fetch(url, {
     method: 'GET',
     headers: buildHeaders(),
   })
+
   return handleResponse<T>(res)
 }
 

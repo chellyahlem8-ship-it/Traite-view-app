@@ -14,7 +14,7 @@ export interface AuthUser {
 
 export interface AuthResponse {
   success: boolean
-  token: string
+  access_token: string
   token_type: string
   utilisateur: AuthUser
 }

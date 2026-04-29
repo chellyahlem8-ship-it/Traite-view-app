@@ -16,8 +16,8 @@ export function useAuth() {
     errorMsg.value = null
     try {
       const response = await authApi.login(payload)
-      // Laravel retourne response.token et response.utilisateur
-      authStore.setAuth(response.token, response.utilisateur)
+      localStorage.setItem('traity_token', response.access_token)
+      authStore.setAuth(response.access_token, response.utilisateur)
       await router.push('/dashboard')
     } catch (e: unknown) {
       errorMsg.value = e instanceof Error ? e.message : 'Email ou mot de passe incorrect'

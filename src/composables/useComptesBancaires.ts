@@ -89,11 +89,11 @@ export function useComptesBancaires() {
           // Adaptez l'endpoint à votre route Laravel pour les sociétés
           const res = await apiGet<{
             success: boolean
-            data: Array<{ id: number; nom_societe: string }>
+            data: Array<{ id: number; raison_sociale: string }>
           }>('societes')
           titulaires.value = res.data.map((s) => ({
             id:    s.id,
-            label: s.nom_societe,
+            label: s.raison_sociale,
           }))
         }
       } catch {
