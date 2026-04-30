@@ -26,80 +26,91 @@
         <div class="traite-overlay">
           <img :src="traiteBg" class="traite-bg-img" alt="Lettre de change" />
 
-          <!-- ══════════════════════════════════════
-               ZONE HAUTE - Première ligne de données
-               ══════════════════════════════════════ -->
+          <!-- ════════════════════════════════════════════════════
+               ZONE HAUTE (corps principal de la traite)
+               ════════════════════════════════════════════════════ -->
 
-          <!-- Numéro traite (haut droite, rouge) - aligné avec le cadre -->
-          <span class="tf tf-numero" style="top:8.5%; left:61%;">{{ D.numero }}</span>
+          <!-- Date d'échéance — "Echéance / حلول الأجل" -->
+          <span class="tf tf-date" style="top:15.8%; left:30%;">
+            {{ D.dateEcheance ? fmt(D.dateEcheance) : '' }}
+          </span>
 
-          <!-- Date d'échéance — après "Echéance الأجل" -->
-          <span class="tf tf-date" style="top:15.8%; left:30%;">{{ D.dateEcheance ? fmt(D.dateEcheance) : '' }}</span>
-
-          <!-- Lieu d'émission — après "Le / في" -->
+          <!-- Lieu d'émission -->
           <span class="tf tf-lieu" style="top:12%; left:50%;">{{ D.lieu }}</span>
 
-          <!-- Date d'émission — après le lieu -->
-          <span class="tf tf-date" style="top:17%; left:50%;">{{ D.dateEmission ? fmt(D.dateEmission) : '' }}</span>
+          <!-- Date d'émission -->
+          <span class="tf tf-date" style="top:17%; left:50%;">
+            {{ D.dateEmission ? fmt(D.dateEmission) : '' }}
+          </span>
 
-          <!-- Montant en chiffres — après "المبلغ Montant" -->
-          <span class="tf tf-montant-chiffres" style="top:25%; left:79%;">{{ D.montant ? D.montant.toFixed(3) : '' }}</span>
+          <!-- Montant en chiffres (haut droite) -->
+          <span class="tf tf-montant-chiffres" style="top:25%; left:79%;">
+            {{ D.montant ? D.montant.toFixed(3) : '' }}
+          </span>
 
-          <!-- ══════════════════════════════════════
-               LIGNE 2 : RIB du Tiré (Banque + RIB)
-               ══════════════════════════════════════ -->
-          <span class="tf tf-banque" style="top:23.5%; left:5%;  max-width:15%;">{{ D.banqueNom }}</span>
-          <span class="tf tf-rib"    style="top:23.5%; left:35%; max-width:38%;">{{ D.rib }}</span>
+          <!-- RIB du Tiré — ligne "RIB ou RIP du Tiré" -->
+          <span class="tf tf-rib" style="top:23.5%; left:29.9%; max-width:38%;">
+            {{ fmtRib(D.rib) }}
+          </span>
 
-          <!-- ══════════════════════════════════════
-               LIGNE 3 : "Contre cette lettre de change..." + Tireur
-               ══════════════════════════════════════ -->
-          <span class="tf tf-nom" style="top:35%; left:10%; max-width:18%;">{{ nomTireur }}</span>
+          <!-- ══════════════════════════════════════════════
+               TIREUR (الساحب) — haut gauche
+               Case "Tireur" en haut à gauche du document
+               ══════════════════════════════════════════════ -->
+          <span class="tf tf-nom" style="top:35%; left:10%; max-width:18%;">
+            {{ nomTireur }}
+          </span>
 
-          <!-- ══════════════════════════════════════
-               LIGNE 4 : "Veuillez payer à l'ordre de..." + Bénéficiaire
-               ══════════════════════════════════════ -->
-          <span class="tf tf-nom" style="top:36.5%; left:37%; max-width:28%;">{{ nomBeneficiaire }}</span>
+          <!-- ══════════════════════════════════════════════
+               "PAYEZ À L'ORDRE DE" — bénéficiaire = tireur
+               Zone centrale "payez à l'ordre de"
+               ══════════════════════════════════════════════ -->
+          <span class="tf tf-nom" style="top:36.5%; left:37%; max-width:28%;">
+            {{ nomTireur }}
+          </span>
 
-          <!-- Montant chiffres 2e occurrence (à droite) -->
-          <span class="tf tf-montant-chiffres" style="top:38%; left:85%;">{{ D.montant ? D.montant.toFixed(3) : '' }}</span>
+          <!-- Montant chiffres 2e occurrence (droite) -->
+          <span class="tf tf-montant-chiffres" style="top:38%; left:85%;">
+            {{ D.montant ? D.montant.toFixed(3) : '' }}
+          </span>
 
-          <!-- ══════════════════════════════════════
-               LIGNE 5 : Montant en lettres
-               "La somme de / المبلغ المذكور"
-               ══════════════════════════════════════ -->
-          <span class="tf tf-montant-lettres" style="top:47%; left:15%; max-width:70%;">{{ D.montantLettres }}</span>
+          <!-- Montant en lettres -->
+          <span class="tf tf-montant-lettres" style="top:47%; left:15%; max-width:70%;">
+            {{ D.montantLettres }}
+          </span>
 
-          <!-- ══════════════════════════════════════
-               TALON - LIGNE 1 : Lieu, dates, bénéficiaire, montant
-               ══════════════════════════════════════ -->
+          <!-- ════════════════════════════════════════════════════
+               TALON (partie basse)
+               ════════════════════════════════════════════════════ -->
+
+          <!-- TALON - LIGNE 1 : Lieu, date émission, date échéance -->
           <span class="tf tf-small" style="top:55.5%; left:7%;  max-width:10%;">{{ D.lieu }}</span>
           <span class="tf tf-small" style="top:55.5%; left:20%;">{{ D.dateEmission ? fmt(D.dateEmission) : '' }}</span>
           <span class="tf tf-small" style="top:55.5%; left:35%;">{{ D.dateEcheance ? fmt(D.dateEcheance) : '' }}</span>
 
-          
+          <!-- TALON - LIGNE 2 : RIB -->
+          <span class="tf tf-rib" style="top:63.5%; left:3%; max-width:35%;">
+            {{ fmtRib(D.rib) }}
+          </span>
 
-          <!-- ══════════════════════════════════════
-               TALON - LIGNE 2 : RIB + Domiciliation (Banque)
-               ══════════════════════════════════════ -->
-          <span class="tf tf-rib"   style="top:63.5%; left:2%;  max-width:35%;">{{ D.rib }}</span>
-          <span class="tf tf-small" style="top:63.5%; left:74%; max-width:22%;">{{ D.banqueNom }}</span>
+          <!-- TALON - Banque (à droite dans le talon) -->
+          <span class="tf tf-small" style="top:63.5%; left:74%; max-width:22%;">
+            {{ D.banqueNom }}
+          </span>
 
-          <!-- ══════════════════════════════════════
-               TALON - LIGNE 3 : Nom et adresse du Tiré
-               "Tiré / المسحوب عليه"
-               ══════════════════════════════════════ -->
-          
+          <!-- ══════════════════════════════════════════════
+               TIRÉ (المسحوب عليه) — zone bas-droite
+               Case "Nom et adresse du Tiré" :
+                 top ≈ 68–72%, dans la grande case de droite
+               ══════════════════════════════════════════════ -->
+          <span class="tf tf-nom tf-tire" style="top:69%; left:55%; max-width:20%;">
+            {{ nomTire }}
+          </span>
 
-          <!-- ══════════════════════════════════════
-               TALON BAS : Signatures
-               ══════════════════════════════════════ -->
-
-          <!-- Zone "Accepté" - nom du Tiré -->
-          <span class="tf tf-small"     style="bottom:25%; left:55%;  max-width:15%;">{{ nomTire }}</span>
-
-          <!-- Zone "Signature du tireur" -->
-          
+          <!-- Banque du tiré — à droite de la case tiré -->
+          <span class="tf tf-small tf-banque-tire" style="top:64%; left:76%; max-width:20%;">
+            {{ D.banqueNom }}
+          </span>
 
         </div>
       </div>
@@ -141,7 +152,7 @@
       </div>
       <div class="info-chip">
         <span class="info-chip-label">RIB</span>
-        <span class="info-chip-value rib-chip">{{ D.rib || '—' }}</span>
+        <span class="info-chip-value rib-chip">{{ fmtRib(D.rib) || '—' }}</span>
       </div>
       <div class="info-chip">
         <span class="info-chip-label">Type</span>
@@ -165,6 +176,16 @@ function fmt(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+/**
+ * Formate un RIB tunisien de 20 chiffres en groupes : XX XXX XXXXXXXXXXXXXXX XX
+ */
+function fmtRib(raw: string | undefined | null): string {
+  if (!raw) return '';
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length !== 20) return raw;
+  return `${digits.slice(0,2)} ${digits.slice(2,5)} ${digits.slice(5,18)} ${digits.slice(18,20)}`;
+}
+
 function todayStr(): string {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
@@ -182,31 +203,48 @@ const D = computed(() => {
     dateEmission:   todayStr(),
     dateEcheance:   '',
     lieu:           f.lieu,
-    beneficiaire:   f.beneficiaire,
+    // On ne stocke plus "beneficiaire" séparément — c'est toujours le tireur
     tireurNom:      f.tireurNom,
     banqueNom:      f.banqueNom,
     rib:            f.rib,
   };
 });
 
+/**
+ * LOGIQUE MÉTIER CORRIGÉE
+ * ─────────────────────────────────────────────────────────
+ * Mode FOURNISSEUR :
+ *   • Tireur  = le FOURNISSEUR (il émet la traite)
+ *   • Tiré    = MA SOCIÉTÉ     (elle doit payer)
+ *
+ * Mode CLIENT :
+ *   • Tireur  = MA SOCIÉTÉ     (elle émet la traite)
+ *   • Tiré    = le CLIENT      (il doit payer)
+ *
+ * Sur le document physique :
+ *   • Case "Tireur الساحب" (haut gauche)  → nomTireur
+ *   • "Payez à l'ordre de"               → nomTireur  (bénéficiaire = tireur)
+ *   • Case "Nom et adresse du Tiré"       → nomTire
+ * ─────────────────────────────────────────────────────────
+ */
 const nomTireur = computed<string>(() => {
-  if (D.value.typeTraite === 'client') return D.value.beneficiaire;
-  return D.value.tireurNom;
+  // CLIENT  → Tireur = ma société (tireurNom dans le store)
+  // FOURN.  → Tireur = le fournisseur sélectionné (bénéficiaire = tiers)
+  if (D.value.typeTraite === 'client') return D.value.tireurNom ?? '';
+  // fournisseur : le tireur c'est le fournisseur, stocké dans "beneficiaire" historiquement
+  return (D.value as any).beneficiaire ?? D.value.tireurNom ?? '';
 });
 
 const nomTire = computed<string>(() => {
-  if (D.value.typeTraite === 'client') return D.value.tireurNom;
-  return D.value.beneficiaire;
-});
-
-const nomBeneficiaire = computed<string>(() => {
-  if (D.value.typeTraite === 'client') return D.value.beneficiaire;
-  return D.value.tireurNom;
+  // CLIENT  → Tiré = le client (tiers sélectionné), stocké dans "beneficiaire" historiquement
+  // FOURN.  → Tiré = ma société
+  if (D.value.typeTraite === 'client') return (D.value as any).beneficiaire ?? '';
+  return D.value.tireurNom ?? '';
 });
 
 const hasAnyData = computed(() =>
   !!(D.value.tireurNom || D.value.banqueNom || D.value.rib ||
-     D.value.montant   || D.value.lieu      || D.value.beneficiaire)
+     D.value.montant   || D.value.lieu      || (D.value as any).beneficiaire)
 );
 </script>
 
@@ -220,97 +258,159 @@ const hasAnyData = computed(() =>
   padding: 20px 24px 24px;
 }
 
-/* Navigation */
-.preview-nav { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:12px; }
+/* ── Navigation ─────────────────────────────────── */
+.preview-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
 .nav-btn {
-  display:flex; align-items:center; justify-content:center;
-  width:34px; height:34px; border-radius:8px;
-  border:1.5px solid #e9e5f5; background:#fff; color:#6b7280;
-  cursor:pointer; transition:all .15s ease;
-  &:hover:not(:disabled) { border-color:#7c3aed; color:#7c3aed; background:#f5f3ff; }
-  &:disabled { opacity:.35; cursor:not-allowed; }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1.5px solid #e9e5f5;
+  background: #fff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all .15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: #7c3aed;
+    color: #7c3aed;
+    background: #f5f3ff;
+  }
+  &:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+  }
 }
-.nav-btn-icon { width:16px; height:16px; }
-.nav-pills { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+.nav-btn-icon { width: 16px; height: 16px; }
+.nav-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 .nav-pill {
-  width:32px; height:32px; display:flex; align-items:center; justify-content:center;
-  border-radius:8px; border:1.5px solid transparent; background:#f5f3ff;
-  color:#6b7280; font-size:.8rem; font-weight:600; font-family:inherit;
-  cursor:pointer; transition:all .15s ease;
-  &:hover { border-color:#7c3aed; color:#7c3aed; }
-  &-active { background:#7c3aed; color:#fff; border-color:#7c3aed; }
-}
-.preview-label { text-align:center; font-size:.8rem; font-weight:600; color:#6d28d9; margin-bottom:12px; }
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  background: #f5f3ff;
+  color: #6b7280;
+  font-size: .8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all .15s ease;
 
-/* Document */
-.traite-document-wrapper { position:relative; }
+  &:hover { border-color: #7c3aed; color: #7c3aed; }
+  &-active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+}
+.preview-label {
+  text-align: center;
+  font-size: .8rem;
+  font-weight: 600;
+  color: #6d28d9;
+  margin-bottom: 12px;
+}
+
+/* ── Document wrapper ───────────────────────────── */
+.traite-document-wrapper { position: relative; }
 .traite-document {
-  border-radius:8px; overflow:hidden;
-  border:1px solid #e9e5f5;
-  box-shadow:0 2px 12px rgba(0,0,0,.12);
-  background:#f8f8f8;
-}
-.traite-overlay {
-  position:relative; width:100%; aspect-ratio:926/607;
-  overflow:hidden; display:block;
-}
-.traite-bg-img {
-  position:absolute; top:0; left:0; width:100%; height:100%;
-  object-fit:fill; display:block; user-select:none; pointer-events:none;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e9e5f5;
+  box-shadow: 0 2px 12px rgba(0,0,0,.12);
+  background: #f8f8f8;
 }
 
-/* Hint */
+/* ── Overlay principal ──────────────────────────── */
+.traite-overlay {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 926 / 607;
+  overflow: hidden;
+  display: block;
+  font-size: 80%;
+}
+
+.traite-bg-img {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: fill;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ── Hint overlay ───────────────────────────────── */
 .preview-hint-overlay {
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  background:rgba(255,255,255,.45); backdrop-filter:blur(1.5px);
-  border-radius:8px; pointer-events:none;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.45);
+  backdrop-filter: blur(1.5px);
+  border-radius: 8px;
+  pointer-events: none;
 }
 .preview-hint-box {
-  display:flex; align-items:center; gap:8px; padding:10px 18px;
-  background:rgba(124,58,237,.9); color:#fff; font-size:.82rem; font-weight:600;
-  border-radius:30px; box-shadow:0 4px 16px rgba(124,58,237,.35); white-space:nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(124,58,237,.9);
+  color: #fff;
+  font-size: .82rem;
+  font-weight: 600;
+  border-radius: 30px;
+  box-shadow: 0 4px 16px rgba(124,58,237,.35);
+  white-space: nowrap;
 }
-.hint-icon { width:16px; height:16px; flex-shrink:0; }
+.hint-icon { width: 16px; height: 16px; flex-shrink: 0; }
 
 /* ══════════════════════════════════════════════════
-   CHAMPS POSITIONNÉS SUR LE DOCUMENT
+   CHAMPS POSITIONNÉS
    ══════════════════════════════════════════════════ */
+
 .tf {
   position: absolute;
   font-family: 'Arial', 'Helvetica', sans-serif;
   color: #00008B;
   font-weight: 600;
   line-height: 1.2;
-  font-size: clamp(5px, 1.08vw, 11.5px);
+  font-size: 1em;
   white-space: nowrap;
   overflow: visible;
   pointer-events: none;
 }
 
-.tf-numero {
-  font-family: 'Courier New', monospace !important;
-  font-size: clamp(6px, 1.1vw, 12px) !important;
-  font-weight: 700;
-  color: #8B0000;
-  letter-spacing: .5px;
-}
-
 .tf-date {
   font-family: 'Courier New', monospace !important;
-  font-size: clamp(5px, .92vw, 10px) !important;
+  font-size: 0.9em !important;
   color: #00008B;
   font-weight: 700;
 }
 
 .tf-montant-chiffres {
-  font-size: clamp(6px, 1vw, 11px) !important;
+  font-size: 0.95em !important;
   font-weight: 800;
   color: #00008B;
 }
 
 .tf-montant-lettres {
-  font-size: clamp(4px, .72vw, 8px) !important;
+  font-size: 0.79em !important;
   font-style: italic;
   font-weight: 600;
   white-space: normal;
@@ -320,71 +420,98 @@ const hasAnyData = computed(() =>
 
 .tf-rib {
   font-family: 'Courier New', monospace !important;
-  letter-spacing: .3px;
-  font-size: clamp(4px, .78vw, 8.5px) !important;
+  letter-spacing: 0.09em;
+  word-spacing: 3.1em;
+  font-size: 0.85em !important;
+  font-weight: 700;
   color: #000080;
 }
 
 .tf-nom {
-  font-size: clamp(5px, .88vw, 10px) !important;
+  font-size: 1em !important;
   font-weight: 700;
   color: #00008B;
   white-space: normal;
   line-height: 1.3;
 }
 
-.tf-banque {
-  font-size: clamp(4.5px, .8vw, 9px) !important;
-  font-weight: 600;
-  white-space: normal;
+/* Tiré — zone bas droite, texte légèrement plus petit pour tenir dans la case */
+.tf-tire {
+  font-size: 0.95em !important;
+  color: #00008B;
+}
+
+/* Banque du tiré dans la case à droite */
+.tf-banque-tire {
+  font-size: 0.88em !important;
   color: #000080;
+  font-weight: 600;
 }
 
 .tf-lieu {
-  font-size: clamp(5px, .88vw, 10px) !important;
+  font-size: 1.05em !important;
   font-weight: 600;
   color: #000080;
 }
 
 .tf-small {
-  font-size: clamp(3.5px, .66vw, 7.5px) !important;
+  font-size: 0.9em !important;
   font-weight: 500;
   white-space: nowrap;
   color: #000080;
 }
 
-.tf-signature {
-  font-style: italic;
-  font-size: clamp(4.5px, .8vw, 9px) !important;
-  font-weight: 600;
-  color: #000080;
+/* ── Chips résumé ───────────────────────────────── */
+.preview-info {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
 }
-
-/* Chips résumé */
-.preview-info { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
 .info-chip {
-  flex:1; min-width:80px; display:flex; flex-direction:column;
-  align-items:center; padding:10px 8px; background:#f5f3ff; border-radius:8px;
+  flex: 1;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 8px;
+  background: #f5f3ff;
+  border-radius: 8px;
 }
-.info-chip-label { font-size:.65rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:3px; }
+.info-chip-label {
+  font-size: .65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #9ca3af;
+  margin-bottom: 3px;
+}
 .info-chip-value {
-  font-size:.82rem; font-weight:700; color:#1e1b4b; text-align:center;
-  &.rib-chip { font-family:'Courier New',monospace; font-size:.72rem; letter-spacing:.5px; }
+  font-size: .82rem;
+  font-weight: 700;
+  color: #1e1b4b;
+  text-align: center;
+
+  &.rib-chip {
+    font-family: 'Courier New', monospace;
+    font-size: .72rem;
+    letter-spacing: .5px;
+  }
 }
 
 .info-chip-role {
   border: 1.5px solid transparent;
-  .info-chip-label { font-size:.6rem; letter-spacing:.08em; }
+  .info-chip-label { font-size: .6rem; letter-spacing: .08em; }
 }
 .info-chip-tireur {
   background: #fef3c7;
-  border-color: rgba(217, 119, 6, 0.25);
+  border-color: rgba(217,119,6,.25);
   .info-chip-label { color: #b45309; }
   .info-chip-value { color: #92400e; }
 }
 .info-chip-tire {
   background: #dbeafe;
-  border-color: rgba(59, 130, 246, 0.25);
+  border-color: rgba(59,130,246,.25);
   .info-chip-label { color: #1d4ed8; }
   .info-chip-value { color: #1e3a5f; }
 }

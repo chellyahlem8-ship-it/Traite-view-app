@@ -6,6 +6,17 @@ export function useTraite() {
   const store = useTraiteStore();
 
   const {
+    // Données de référence
+    societe,
+    loadingSociete,
+    loadingTiers,
+    loadingComptes,
+    // Computed filtrés
+    tiersFiltered,
+    tiersSelectionne,
+    comptesDisponibles,
+    compteSelectionne,
+    // Formulaire
     formData,
     generatedTraites,
     currentTraite,
@@ -15,23 +26,29 @@ export function useTraite() {
     montantParTraite,
     isSaving,
     saveError,
-    saveSuccess
+    saveSuccess,
   } = storeToRefs(store);
 
+  // ── Initialisation ──────────────────────────────────────────────
+  async function init(): Promise<void> {
+    await store.init();
+  }
+
+  // ── Mise à jour d'un champ du formulaire ────────────────────────
   function setField<K extends keyof TraiteFormData>(field: K, value: TraiteFormData[K]): void {
     store.updateField(field, value);
   }
 
+  // ── Génération ─────────────────────────────────────────────────
   function generate(): void {
-    if (canGenerate.value) {
-      store.generateTraites();
-    }
+    if (canGenerate.value) store.generateTraites();
   }
 
   function updateTraiteField(index: number, field: 'montant' | 'dateEcheance', value: string | number): void {
     store.updateTraiteField(index, field, value);
   }
 
+  // ── Navigation ─────────────────────────────────────────────────
   function navigateTo(index: number): void {
     store.goToTraite(index);
   }
@@ -44,15 +61,28 @@ export function useTraite() {
     store.prevTraite();
   }
 
+  // ── Réinitialisation ────────────────────────────────────────────
   function clearAll(): void {
     store.reset();
   }
 
+  // ── Sauvegarde ─────────────────────────────────────────────────
   async function save(): Promise<void> {
     await store.saveToBackend();
   }
 
   return {
+    // Société connectée
+    societe,
+    loadingSociete,
+    loadingTiers,
+    loadingComptes,
+    // Listes dynamiques
+    tiersFiltered,
+    tiersSelectionne,
+    comptesDisponibles,
+    compteSelectionne,
+    // Formulaire
     formState: formData,
     traites: generatedTraites,
     current: currentTraite,
@@ -63,6 +93,8 @@ export function useTraite() {
     saving: isSaving,
     error: saveError,
     success: saveSuccess,
+    // Actions
+    init,
     setField,
     generate,
     updateTraiteField,
@@ -70,6 +102,6 @@ export function useTraite() {
     navigateNext,
     navigatePrev,
     clearAll,
-    save
+    save,
   };
 }

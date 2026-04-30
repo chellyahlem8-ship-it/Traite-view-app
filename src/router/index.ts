@@ -2,32 +2,45 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.store';
 import LoginView from '@/views/LoginView.vue';
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue';
-import TraitesView from '@/views/TraitesView.vue';
+import TraitesView from '@/views/TraiteView.vue';
 import TiersView from '@/views/tiers/TiersView.vue';
 import CreateTier from '@/views/tiers/CreateTier.vue';
 import EditTier from '@/views/tiers/EditTier.vue';
 import CreateBanque from '@/views/banques/CreateBanque.vue';
-import CreateCompteBancaire from '@/views/comptesBancaires/CreateCompteBancaire.vue'
+import CreateCompteBancaire from '@/views/comptesBancaires/CreateCompteBancaire.vue';
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+
+    // ── AUTH ───────────────────────────────────────────────────
     { path: '/', redirect: '/login' },
-    { path: '/login', component: LoginView, meta: { guest: true } },
-    { path: '/forgot-password', component: ForgotPasswordView, meta: { guest: true } },
-    {
-      path: '/reset-password',
-      component: () => import('@/views/ResetPasswordView.vue'),
-    },
+    { path: '/login',           component: LoginView,           meta: { guest: true } },
+    { path: '/signup',          component: () => import('@/views/SignupView.vue'),        meta: { guest: true } },
+    { path: '/forgot-password', component: ForgotPasswordView,  meta: { guest: true } },
+    { path: '/reset-password',  component: () => import('@/views/ResetPasswordView.vue') },
+
+    // ── DASHBOARD ──────────────────────────────────────────────
     {
       path: '/dashboard',
+      name: 'Dashboard',
       component: () => import('@/views/DashboardView.vue'),
       meta: { requiresAuth: true },
     },
+
+    // ── TRAITES ────────────────────────────────────────────────
     {
       path: '/traites',
       name: 'Traites',
       component: TraitesView,
+      meta: { requiresAuth: true },
+    },
+
+    // ── STATUTS TRAITE ─────────────────────────────────────────
+    {
+      path: '/statuts-traite/creer',
+      name: 'CreateStatutTraite',
+      component: () => import('@/views/CreateStatutTraite.vue'),
       meta: { requiresAuth: true },
     },
 
@@ -65,7 +78,15 @@ const router = createRouter({
       name: 'CreateCompteBancaire',
       component: CreateCompteBancaire,
       meta: { requiresAuth: true },
-    }
+    },
+
+    // ── UTILISATEURS ───────────────────────────────────────────
+    {
+      path: '/utilisateurs/creer',
+      name: 'CreateUtilisateur',
+      component: () => import('@/views/CreateUtilisateur.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 });
 

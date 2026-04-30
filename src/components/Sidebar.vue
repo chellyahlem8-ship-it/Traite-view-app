@@ -16,28 +16,73 @@
     </div>
 
     <nav class="sidebar-nav">
-      <router-link to="/dashboard" class="nav-item" active-class="active" @click="closeSidebar">
+      <router-link
+        to="/dashboard"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
         <span class="nav-icon">🏠</span> Tableau de bord
       </router-link>
 
-      <router-link to="/traites" class="nav-item" active-class="active" @click="closeSidebar">
+      <router-link
+        :to="{ name: 'Traites' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
         <span class="nav-icon">📄</span> Traites
       </router-link>
 
-      <router-link to="/tiers" class="nav-item" active-class="active" @click="closeSidebar">
+      <router-link
+        :to="{ name: 'CreateStatutTraite' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
+        <span class="nav-icon">📋</span> Statuts de traite
+      </router-link>
+
+      <router-link
+        :to="{ name: 'Tiers' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
         <span class="nav-icon">👥</span> Tiers
       </router-link>
 
-      <router-link to="/banques/create" class="nav-item" active-class="active" @click="closeSidebar">
+      <router-link
+        :to="{ name: 'CreateUtilisateur' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
+        <span class="nav-icon">👤</span> Utilisateurs
+      </router-link>
+
+      <router-link
+        :to="{ name: 'BanquesCreate' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
         <span class="nav-icon">🏦</span> Banques
       </router-link>
-      <router-link to="/comptes-bancaires/create" class="nav-item" active-class="active" @click="closeSidebar">
-        <span class="nav-icon">🏦</span> Comptes bancaires
+
+      <router-link
+        :to="{ name: 'CreateCompteBancaire' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
+        <span class="nav-icon">💳</span> Comptes bancaires
       </router-link>
 
       <button class="nav-item" disabled>
         <span class="nav-icon">💰</span> Trésorerie
       </button>
+
       <button class="nav-item" disabled>
         <span class="nav-icon">⚙️</span> Paramètres
       </button>
@@ -59,48 +104,49 @@ const handleLogout = () => { logout() }
 
 const isOpen = ref(false)
 const toggleSidebar = () => { isOpen.value = !isOpen.value }
-const closeSidebar = () => { isOpen.value = false }
+const closeSidebar  = () => { isOpen.value = false }
 </script>
 
 <style scoped lang="scss">
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
-/* ── Bouton hamburger ─────────────────────────────────────────── */
+/* ── Hamburger ───────────────────────────────────────────────── */
 .hamburger-btn {
   display: none;
   position: fixed;
-  top: 16px;
+  top: 0;
   left: 16px;
-  z-index: 300;
+  z-index: 99999;
   background: #4c1d95;
   border: none;
-  border-radius: 10px;
-  width: 42px;
-  height: 42px;
+  border-radius: 0 0 10px 10px;
+  width: 48px;
+  height: 48px;
   cursor: pointer;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 5px;
   padding: 0;
-  box-shadow: 0 2px 12px rgba(76, 29, 149, 0.4);
+  box-shadow: 0 4px 16px rgba(76, 29, 149, 0.5);
+  isolation: isolate;
 }
 
 .hamburger-line {
   display: block;
-  width: 20px;
-  height: 2px;
+  width: 22px;
+  height: 2.5px;
   background: #fff;
   border-radius: 2px;
   transition: all 0.25s ease;
   transform-origin: center;
 
-  &.open:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-  &.open:nth-child(2) { opacity: 0; transform: scaleX(0); }
+  &.open:nth-child(1) { transform: translateY(7px)  rotate(45deg);  }
+  &.open:nth-child(2) { opacity: 0; transform: scaleX(0);           }
   &.open:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 }
 
-/* ── Overlay ──────────────────────────────────────────────────── */
+/* ── Overlay ─────────────────────────────────────────────────── */
 .sidebar-overlay {
   display: none;
   position: fixed;
@@ -117,7 +163,7 @@ const closeSidebar = () => { isOpen.value = false }
   }
 }
 
-/* ── Sidebar ──────────────────────────────────────────────────── */
+/* ── Sidebar ─────────────────────────────────────────────────── */
 .sidebar {
   width: 240px;
   background: linear-gradient(180deg, #4c1d95 0%, #6d28d9 60%, #8b5cf6 100%);
@@ -198,22 +244,18 @@ const closeSidebar = () => { isOpen.value = false }
   &:hover { background: rgba(255, 255, 255, 0.2); }
 }
 
-/* ── Responsive ───────────────────────────────────────────────── */
+/* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .hamburger-btn {
-    display: flex;
-  }
-
-  .sidebar-overlay {
-    display: block;
-  }
+  .hamburger-btn    { display: flex; }
+  .sidebar-overlay  { display: block; }
 
   .sidebar {
     transform: translateX(-100%);
-
-    &.sidebar--open {
-      transform: translateX(0);
-    }
+    &.sidebar--open { transform: translateX(0); }
   }
+}
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .hamburger-btn { top: env(safe-area-inset-top); }
 }
 </style>

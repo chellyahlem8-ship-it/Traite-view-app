@@ -2,10 +2,9 @@
   <div class="auth-root">
     <div class="auth-card">
 
-      <!-- ═══ PANNEAU VIOLET — l'élément qui fait toute la transition ═══ -->
+      <!-- ═══ PANNEAU VIOLET ═══ -->
       <div class="color-panel" :class="panelClass">
 
-        <!-- Contenu LOGIN -->
         <Transition name="fade">
           <div v-if="mode === 'login'" class="panel-content" key="panel-login">
             <div class="panel-logo">
@@ -33,7 +32,6 @@
           </div>
         </Transition>
 
-        <!-- Contenu FORGOT -->
         <Transition name="fade">
           <div v-if="mode === 'forgot'" class="panel-content" key="panel-forgot">
             <div class="panel-logo">
@@ -106,10 +104,9 @@
                 <span v-else>SE CONNECTER</span>
               </button>
             </form>
-            <p class="register-link">
-              Pas encore de compte ?
-              <RouterLink to="/register">Créer un compte</RouterLink>
-            </p>
+            <div class="register-link">
+              Pas encore de compte ? <router-link to="/signup">S'inscrire</router-link>
+            </div>
           </div>
         </Transition>
 
@@ -159,9 +156,6 @@ const { forgotPassword, loading: forgotLoading, errorMsg: forgotError, successMs
 const forgotEmail = ref('')
 
 // ─── Classes dynamiques du panneau violet ────────────────────
-// panel-left  = occupe la moitié gauche (mode login, au repos)
-// panel-right = occupe la moitié droite (mode forgot, au repos)
-// panel-expand = prend tout l'écran (pendant la transition)
 const panelClass = computed(() => {
   if (transitioning.value) return 'panel-expand'
   return mode.value === 'login' ? 'panel-left' : 'panel-right'
@@ -175,11 +169,11 @@ const formClass = computed(() => {
 // ─── LOGIN → FORGOT ──────────────────────────────────────────
 async function switchToForgot() {
   if (transitioning.value) return
-  transitioning.value = true       // 1. panneau s'étend vers la droite → full screen
-  await wait(650)                  // 2. attend que l'expansion soit totale
-  mode.value = 'forgot'            // 3. change contenu (invisible car formulaire masqué)
+  transitioning.value = true
+  await wait(650)
+  mode.value = 'forgot'
   await wait(80)
-  transitioning.value = false      // 4. panneau se rétracte vers la droite
+  transitioning.value = false
 }
 
 // ─── FORGOT → LOGIN ──────────────────────────────────────────
@@ -210,7 +204,6 @@ async function handleForgot() {
 
 * { box-sizing: border-box; }
 
-/* ─── Fond de page ─────────────────────────────────────────── */
 .auth-root {
   min-height: 100vh;
   display: flex;
@@ -220,7 +213,6 @@ async function handleForgot() {
   font-family: 'Outfit', sans-serif;
 }
 
-/* ─── Carte ────────────────────────────────────────────────── */
 .auth-card {
   width: 900px;
   height: 560px;
@@ -231,9 +223,6 @@ async function handleForgot() {
   background: #f5f3ff;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   PANNEAU VIOLET
-   ═══════════════════════════════════════════════════════════ */
 .color-panel {
   position: absolute;
   top: 0;
@@ -243,7 +232,6 @@ async function handleForgot() {
   z-index: 10;
   overflow: hidden;
 
-  /* Cercles décoratifs */
   &::before {
     content: '';
     position: absolute;
@@ -265,35 +253,20 @@ async function handleForgot() {
     pointer-events: none;
   }
 
-  /* État repos gauche (login) */
   &.panel-left {
-    left: 0;
-    width: 50%;
-    transition:
-      left  0.7s cubic-bezier(0.76, 0, 0.24, 1),
-      width 0.7s cubic-bezier(0.76, 0, 0.24, 1);
+    left: 0; width: 50%;
+    transition: left 0.7s cubic-bezier(0.76,0,0.24,1), width 0.7s cubic-bezier(0.76,0,0.24,1);
   }
-
-  /* État repos droite (forgot) */
   &.panel-right {
-    left: 50%;
-    width: 50%;
-    transition:
-      left  0.7s cubic-bezier(0.76, 0, 0.24, 1),
-      width 0.7s cubic-bezier(0.76, 0, 0.24, 1);
+    left: 50%; width: 50%;
+    transition: left 0.7s cubic-bezier(0.76,0,0.24,1), width 0.7s cubic-bezier(0.76,0,0.24,1);
   }
-
-  /* État expansion plein écran */
   &.panel-expand {
-    left: 0;
-    width: 100%;
-    transition:
-      left  0.55s cubic-bezier(0.76, 0, 0.24, 1),
-      width 0.55s cubic-bezier(0.76, 0, 0.24, 1);
+    left: 0; width: 100%;
+    transition: left 0.55s cubic-bezier(0.76,0,0.24,1), width 0.55s cubic-bezier(0.76,0,0.24,1);
   }
 }
 
-/* ─── Contenu du panneau violet ────────────────────────────── */
 .panel-content {
   position: absolute;
   inset: 0;
@@ -305,35 +278,30 @@ async function handleForgot() {
 
 .panel-logo {
   position: absolute;
-  top: 24px;
-  left: 28px;
+  top: 24px; left: 28px;
   z-index: 2;
   :deep(.traity-name) { color: #fff !important; }
 }
 
 .avatar-wrap { z-index: 1; }
-
 .avatar-img {
-  width: 200px;
-  height: auto;
+  width: 200px; height: auto;
   display: block;
   filter: drop-shadow(0 10px 28px rgba(80, 0, 120, 0.3));
 }
 
 .stat-float {
   position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.35);
   backdrop-filter: blur(10px);
   border-radius: 14px;
   padding: 10px 16px;
   color: #fff;
   min-width: 175px;
   z-index: 5;
-  box-shadow: 0 8px 24px rgba(60, 0, 100, 0.2);
+  box-shadow: 0 8px 24px rgba(60,0,100,0.2);
 
   .stat-icon  { font-size: 18px; }
   .stat-value { font-size: 13px; font-weight: 600; margin: 0; }
@@ -342,44 +310,23 @@ async function handleForgot() {
     margin-left: auto;
     font-size: 10px; font-weight: 600;
     color: #d1fae5;
-    background: rgba(52, 211, 153, 0.2);
+    background: rgba(52,211,153,0.2);
     border-radius: 6px;
     padding: 2px 7px;
   }
 }
 
-.stat-top {
-  top: 20%; right: 5%;
-  animation: floatUp 4s ease-in-out infinite;
-}
-.stat-bottom {
-  bottom: 14%; left: 3%;
-  animation: floatDown 4.5s ease-in-out infinite;
-}
+.stat-top    { top: 20%; right: 5%;  animation: floatUp   4s   ease-in-out infinite; }
+.stat-bottom { bottom: 14%; left: 3%;  animation: floatDown 4.5s ease-in-out infinite; }
 
-@keyframes floatUp {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-12px); }
-}
-@keyframes floatDown {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(12px); }
-}
+@keyframes floatUp   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+@keyframes floatDown { 0%,100% { transform: translateY(0); } 50% { transform: translateY(12px);  } }
 
-/* ═══════════════════════════════════════════════════════════
-   PANNEAU FORMULAIRE
-   ═══════════════════════════════════════════════════════════ */
 .form-panel {
   position: absolute;
-  top: 0;
-  height: 100%;
-  width: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    left    0.7s cubic-bezier(0.76, 0, 0.24, 1),
-    opacity 0.2s ease;
+  top: 0; height: 100%; width: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: left 0.7s cubic-bezier(0.76,0,0.24,1), opacity 0.2s ease;
 
   &.form-right  { left: 50%; opacity: 1; }
   &.form-left   { left: 0;   opacity: 1; }
@@ -395,46 +342,30 @@ async function handleForgot() {
   position: absolute;
 }
 
-.form-logo-wrap {
-  position: absolute;
-  top: 24px;
-  left: 28px;
-}
-
 .form-title {
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 26px; font-weight: 700;
   color: #4c1d95;
-  margin-bottom: 6px;
-  margin-top: 40px;
+  margin-bottom: 6px; margin-top: 40px;
   text-align: center;
 }
 
 .form-sub {
-  font-size: 13px;
-  color: #7c3aed;
+  font-size: 13px; color: #7c3aed;
   text-align: center;
-  margin-bottom: 22px;
-  line-height: 1.6;
+  margin-bottom: 22px; line-height: 1.6;
 }
 
 .auth-form {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: flex; flex-direction: column; gap: 14px;
 }
 
 .field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: flex; flex-direction: column; gap: 6px;
 
   label {
-    font-size: 12px;
-    font-weight: 500;
-    color: #7c3aed;
-    letter-spacing: 0.4px;
+    font-size: 12px; font-weight: 500;
+    color: #7c3aed; letter-spacing: 0.4px;
   }
 
   input {
@@ -443,8 +374,7 @@ async function handleForgot() {
     border-radius: 10px;
     font-size: 14px;
     font-family: 'Outfit', sans-serif;
-    background: #fff;
-    color: #4c1d95;
+    background: #fff; color: #4c1d95;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
 
@@ -469,9 +399,7 @@ async function handleForgot() {
 }
 
 .form-options {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: flex; justify-content: space-between; align-items: center;
 
   .remember-me {
     display: flex; align-items: center; gap: 7px;
@@ -486,17 +414,11 @@ async function handleForgot() {
 }
 
 .btn-primary {
-  width: 100%;
-  padding: 13px;
+  width: 100%; padding: 13px;
   background: linear-gradient(135deg, #8b5cf6, #a78bfa);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  cursor: pointer;
-  font-family: 'Outfit', sans-serif;
+  color: #fff; border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 600; letter-spacing: 1px;
+  cursor: pointer; font-family: 'Outfit', sans-serif;
   transition: opacity 0.2s, transform 0.1s;
   display: flex; align-items: center; justify-content: center;
 
@@ -537,7 +459,6 @@ async function handleForgot() {
   }
 }
 
-/* ─── Transitions Vue ──────────────────────────────────────── */
 .fade-enter-active { transition: opacity 0.3s ease 0.1s; }
 .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }

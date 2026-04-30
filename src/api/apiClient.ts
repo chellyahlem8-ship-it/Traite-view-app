@@ -37,12 +37,16 @@ function buildHeaders(withAuth = true): HeadersInit {
 
 // ─── Gestionnaire de réponse générique ────────────────────────
 // Lance une erreur avec le message du serveur si la réponse n'est pas OK.
+// L'erreur porte `.status` et `.errors` pour le traitement fin côté composant.
 async function handleResponse<T>(res: Response): Promise<T> {
   const data = await res.json()
   if (!res.ok) {
-    // Laravel renvoie souvent { message: '...' } ou { errors: {...} }
-    const msg = data.message || JSON.stringify(data.errors) || 'Erreur serveur'
-    throw new Error(msg)
+    const err: any = new Error(
+      data.message || JSON.stringify(data.errors) || 'Erreur serveur'
+    )
+    err.status = res.status
+    err.errors = data.errors || null   // ← utile pour les erreurs 422 Laravel
+    throw err
   }
   return data as T
 }
@@ -50,14 +54,19 @@ async function handleResponse<T>(res: Response): Promise<T> {
 // ─── Méthodes HTTP ────────────────────────────────────────────
 
 /** GET /api/<endpoint> */
-export async function apiGet<T>(endpoint: string, params?: Record<string, string | number | boolean>): Promise<T> {
+export async function apiGet<T>(
+  endpoint: string,
+  params?: Record<string, string | number | boolean>
+): Promise<T> {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
 
   let url = `${BASE_URL}/${cleanEndpoint}`
 
   if (params) {
     const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))
+      Object.fromEntries(
+        Object.entries(params).map(([k, v]) => [k, String(v)])
+      )
     ).toString()
     url += `?${qs}`
   }
@@ -70,8 +79,14 @@ export async function apiGet<T>(endpoint: string, params?: Record<string, string
   return handleResponse<T>(res)
 }
 
-/** POST /api/<endpoint> */
-export async function apiPost<T>(endpoint: string, body: unknown, withAuth = true): Promise<T> {
+/** POST /api/<endpoint>
+ *  withAuth = false  →  requête publique (signup, login, forgot…)
+ */
+export async function apiPost<T>(
+  endpoint: string,
+  body: unknown,
+  withAuth = true
+): Promise<T> {
   const res = await fetch(`${BASE_URL}/${endpoint}`, {
     method: 'POST',
     headers: buildHeaders(withAuth),
@@ -81,7 +96,11 @@ export async function apiPost<T>(endpoint: string, body: unknown, withAuth = tru
 }
 
 /** PUT /api/<endpoint>/<id> */
-export async function apiPut<T>(endpoint: string, id: number | string, body: unknown): Promise<T> {
+export async function apiPut<T>(
+  endpoint: string,
+  id: number | string,
+  body: unknown
+): Promise<T> {
   const res = await fetch(`${BASE_URL}/${endpoint}/${id}`, {
     method: 'PUT',
     headers: buildHeaders(),
@@ -91,7 +110,10 @@ export async function apiPut<T>(endpoint: string, id: number | string, body: unk
 }
 
 /** DELETE /api/<endpoint>/<id> */
-export async function apiDelete<T>(endpoint: string, id: number | string): Promise<T> {
+export async function apiDelete<T>(
+  endpoint: string,
+  id: number | string
+): Promise<T> {
   const res = await fetch(`${BASE_URL}/${endpoint}/${id}`, {
     method: 'DELETE',
     headers: buildHeaders(),

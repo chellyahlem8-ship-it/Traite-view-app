@@ -7,17 +7,13 @@
 
     <form class="form-body" @submit.prevent="handleGenerate">
 
-      <!-- ── Section : Type de traite ── -->
+      <!-- ── TYPE DE TRAITE ── -->
       <div class="form-section">
         <h3 class="section-label">Type de traite</h3>
-
         <div class="type-selector">
-          <button
-            type="button"
-            class="type-btn"
+          <button type="button" class="type-btn"
             :class="{ 'type-btn-active': formState.typeTraite === 'fournisseur' }"
-            @click="setField('typeTraite', 'fournisseur')"
-          >
+            @click="setField('typeTraite', 'fournisseur')">
             <svg viewBox="0 0 20 20" fill="currentColor" class="type-icon">
               <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
               <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z"/>
@@ -28,12 +24,9 @@
             </div>
           </button>
 
-          <button
-            type="button"
-            class="type-btn"
+          <button type="button" class="type-btn"
             :class="{ 'type-btn-active': formState.typeTraite === 'client' }"
-            @click="setField('typeTraite', 'client')"
-          >
+            @click="setField('typeTraite', 'client')">
             <svg viewBox="0 0 20 20" fill="currentColor" class="type-icon">
               <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
             </svg>
@@ -45,101 +38,213 @@
         </div>
       </div>
 
-      <!-- ── Section : Tiers & Compte bancaire (saisie libre) ── -->
+      <!-- ── TIERS & COMPTE BANCAIRE ── -->
       <div class="form-section">
-        <h3 class="section-label">Tiers & Compte bancaire</h3>
+        <h3 class="section-label">Tiers &amp; Compte bancaire</h3>
 
-        <!-- Nom du tiers -->
-        <div class="field-group">
-          <label class="field-label">
-            {{ formState.typeTraite === 'fournisseur' ? 'Nom du fournisseur (Tireur)' : 'Nom du client (Tiré)' }}
-            <span class="required-star">*</span>
-          </label>
-          <input
-            type="text"
-            class="field-input"
-            :placeholder="formState.typeTraite === 'fournisseur' ? 'Ex: Société Ahmed SARL' : 'Ex: Client Martin'"
-            :value="formState.tireurNom"
-            @input="setField('tireurNom', ($event.target as HTMLInputElement).value)"
-          />
+        <!-- ══ TIREUR ══ -->
+        <div class="partie-bloc">
+          <div class="partie-titre">
+            <span class="partie-badge partie-badge--tireur">Tireur</span>
+            <span class="partie-role">
+              {{ formState.typeTraite === 'fournisseur'
+                  ? '— le fournisseur (sélectionner)'
+                  : '— votre société (auto)' }}
+            </span>
+          </div>
+
+          <!--
+            FOURNISSEUR → Tireur = un tiers de type fournisseur
+          -->
+          <template v-if="formState.typeTraite === 'fournisseur'">
+            <div class="field-group">
+              <label class="field-label">Fournisseur (Tireur) <span class="required-star">*</span></label>
+              <div class="select-wrapper" :class="{ 'select-loading': loadingTiers }">
+                <select class="field-select"
+                  :value="formState.tiersSelectionneId ?? ''"
+                  @change="setField('tiersSelectionneId', Number(($event.target as HTMLSelectElement).value) || null)"
+                  :disabled="loadingTiers">
+                  <option value="">{{ loadingTiers ? 'Chargement...' : '— Sélectionner un fournisseur —' }}</option>
+                  <option v-for="tier in tiersFiltered" :key="tier.id" :value="tier.id">
+                    {{ tier.raison_sociale }}
+                  </option>
+                </select>
+                <svg class="select-chevron" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <p v-if="tiersFiltered.length === 0 && !loadingTiers" class="field-hint field-hint--warn">
+                Aucun fournisseur trouvé dans vos tiers.
+              </p>
+            </div>
+            <div v-if="tiersSelectionne" class="tiers-chip">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="chip-icon chip-icon--blue">
+                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+              </svg>
+              <span class="chip-nom">{{ tiersSelectionne.raison_sociale }}</span>
+            </div>
+          </template>
+
+          <!--
+            CLIENT → Tireur = MA SOCIÉTÉ (auto)
+          -->
+          <template v-else>
+            <div v-if="loadingSociete" class="skeleton-wrap"><span class="skeleton-bar"></span></div>
+            <div v-else-if="societe" class="societe-chip">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="chip-icon chip-icon--green">
+                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clip-rule="evenodd"/>
+              </svg>
+              <span class="chip-nom">{{ nomSociete }}</span>
+            </div>
+            <div v-else class="fill-empty">Impossible de charger la société.</div>
+          </template>
         </div>
 
-        <!-- Nom de la banque + RIB sur la même ligne -->
-        <div class="field-row">
+        <!-- ══ TIRÉ ══ -->
+        <div class="partie-bloc mt-12">
+          <div class="partie-titre">
+            <span class="partie-badge partie-badge--tire">Tiré</span>
+            <span class="partie-role">
+              {{ formState.typeTraite === 'fournisseur'
+                  ? '— votre société (auto)'
+                  : '— le client (sélectionner)' }}
+            </span>
+          </div>
+
+          <!--
+            FOURNISSEUR → Tiré = MA SOCIÉTÉ (auto)
+          -->
+          <template v-if="formState.typeTraite === 'fournisseur'">
+            <div v-if="loadingSociete" class="skeleton-wrap"><span class="skeleton-bar"></span></div>
+            <div v-else-if="societe" class="societe-chip">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="chip-icon chip-icon--green">
+                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clip-rule="evenodd"/>
+              </svg>
+              <span class="chip-nom">{{ nomSociete }}</span>
+            </div>
+            <div v-else class="fill-empty">Impossible de charger la société.</div>
+          </template>
+
+          <!--
+            CLIENT → Tiré = un CLIENT parmi les tiers
+          -->
+          <template v-else>
+            <div class="field-group">
+              <label class="field-label">Client (Tiré) <span class="required-star">*</span></label>
+              <div class="select-wrapper" :class="{ 'select-loading': loadingTiers }">
+                <select class="field-select"
+                  :value="formState.tiersSelectionneId ?? ''"
+                  @change="setField('tiersSelectionneId', Number(($event.target as HTMLSelectElement).value) || null)"
+                  :disabled="loadingTiers">
+                  <option value="">{{ loadingTiers ? 'Chargement...' : '— Sélectionner un client —' }}</option>
+                  <option v-for="tier in tiersFiltered" :key="tier.id" :value="tier.id">
+                    {{ tier.raison_sociale }}
+                  </option>
+                </select>
+                <svg class="select-chevron" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <p v-if="tiersFiltered.length === 0 && !loadingTiers" class="field-hint field-hint--warn">
+                Aucun client trouvé dans vos tiers.
+              </p>
+            </div>
+            <div v-if="tiersSelectionne" class="tiers-chip mt-8">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="chip-icon chip-icon--blue">
+                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+              </svg>
+              <span class="chip-nom">{{ tiersSelectionne.raison_sociale }}</span>
+            </div>
+          </template>
+        </div>
+
+        <!-- ══ COMPTE BANCAIRE ══ -->
+        <div class="partie-bloc mt-12">
+          <div class="partie-titre">
+            <span class="partie-badge partie-badge--compte">Compte bancaire</span>
+            <span class="partie-role">
+              {{ formState.typeTraite === 'fournisseur'
+                  ? '— votre RIB (société, tiré)'
+                  : '— RIB du client sélectionné (tiré)' }}
+            </span>
+          </div>
+
           <div class="field-group">
-            <label class="field-label">
-              Banque du Tiré
-              <span class="required-star">*</span>
-            </label>
-            <input
-              type="text"
-              class="field-input"
-              placeholder="Ex: BNA, STB, Attijari..."
-              :value="formState.banqueNom"
-              @input="setField('banqueNom', ($event.target as HTMLInputElement).value)"
-            />
+            <label class="field-label">RIB / Compte <span class="required-star">*</span></label>
+
+            <p v-if="formState.typeTraite === 'client' && !formState.tiersSelectionneId" class="field-hint">
+              Sélectionnez d'abord un client pour voir ses comptes.
+            </p>
+
+            <template v-else>
+              <div v-if="loadingComptes" class="skeleton-wrap"><span class="skeleton-bar"></span></div>
+
+              <p v-else-if="comptesDisponibles.length === 0" class="field-hint field-hint--warn">
+                {{ formState.typeTraite === 'fournisseur'
+                    ? 'Aucun compte bancaire enregistré pour votre société.'
+                    : 'Ce client n\'a aucun compte bancaire enregistré.' }}
+              </p>
+
+              <div v-else class="select-wrapper">
+                <select class="field-select field-select-mono"
+                  :value="formState.compteBancaireId ?? ''"
+                  @change="setField('compteBancaireId', Number(($event.target as HTMLSelectElement).value) || null)">
+                  <option value="">— Sélectionner un compte —</option>
+                  <option v-for="compte in comptesDisponibles" :key="compte.id" :value="compte.id">
+                    {{ compte.banque?.nomBanque ?? 'Banque' }} — {{ compte.rib }}
+                  </option>
+                </select>
+                <svg class="select-chevron" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+            </template>
           </div>
-          <div class="field-group">
-            <label class="field-label">
-              RIB
-              <span class="required-star">*</span>
-            </label>
-            <input
-              type="text"
-              class="field-input field-input-mono"
-              placeholder="Ex: 01 234 0123456789 56"
-              :value="formState.rib"
-              @input="setField('rib', ($event.target as HTMLInputElement).value)"
-            />
+
+          <!-- Aperçu du compte sélectionné -->
+          <div v-if="compteSelectionne" class="compte-preview">
+            <div class="compte-preview-item">
+              <span class="compte-preview-label">Banque</span>
+              <span class="compte-preview-value">{{ compteSelectionne.banque?.nomBanque ?? '—' }}</span>
+            </div>
+            <div class="compte-preview-sep">|</div>
+            <div class="compte-preview-item">
+              <span class="compte-preview-label">RIB</span>
+              <span class="compte-preview-value rib">{{ compteSelectionne.rib }}</span>
+            </div>
           </div>
         </div>
 
-        <!-- Aperçu du compte si les deux champs sont remplis -->
-        <div v-if="formState.banqueNom && formState.rib" class="compte-info-bar">
-          <div class="compte-info-item">
-            <span class="compte-info-label">Banque</span>
-            <span class="compte-info-value">{{ formState.banqueNom }}</span>
-          </div>
-          <div class="compte-info-sep">|</div>
-          <div class="compte-info-item">
-            <span class="compte-info-label">RIB</span>
-            <span class="compte-info-value compte-rib">{{ formState.rib }}</span>
-          </div>
+        <!-- ══ NOTE INFO : bénéficiaire automatique ══ -->
+        <div class="info-auto-beneficiaire">
+          <svg viewBox="0 0 20 20" fill="currentColor" class="info-icon">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+          </svg>
+          <span>
+            Le bénéficiaire est automatiquement le <strong>tireur</strong> —
+            {{ formState.typeTraite === 'client' ? nomSociete || 'votre société' : tiersSelectionne?.raison_sociale || 'le fournisseur' }}.
+          </span>
         </div>
+
       </div>
 
-      <!-- ── Section : Montant & Répartition ── -->
+      <!-- ── MONTANT & RÉPARTITION ── -->
       <div class="form-section">
-        <h3 class="section-label">Montant & Répartition</h3>
-
+        <h3 class="section-label">Montant &amp; Répartition</h3>
         <div class="field-row">
           <div class="field-group">
             <label class="field-label">Montant total (DT)</label>
-            <input
-              type="number"
-              class="field-input"
-              placeholder="0.000"
-              min="0"
-              step="0.001"
+            <input type="number" class="field-input" placeholder="0.000" min="0" step="0.001"
               :value="formState.montantTotal || ''"
-              @input="setField('montantTotal', Number(($event.target as HTMLInputElement).value))"
-            />
+              @input="setField('montantTotal', Number(($event.target as HTMLInputElement).value))" />
           </div>
           <div class="field-group">
             <label class="field-label">Nombre de traites</label>
-            <input
-              type="number"
-              class="field-input"
-              placeholder="1"
-              min="1"
-              max="36"
+            <input type="number" class="field-input" placeholder="1" min="1" max="36"
               :value="formState.nombreTraites"
-              @input="setField('nombreTraites', Math.max(1, Number(($event.target as HTMLInputElement).value)))"
-            />
+              @input="setField('nombreTraites', Math.max(1, Number(($event.target as HTMLInputElement).value)))" />
           </div>
         </div>
-
-        <!-- Indicateur montant par traite -->
         <div v-if="formState.nombreTraites > 1 && formState.montantTotal > 0" class="amount-indicator">
           <svg viewBox="0 0 20 20" fill="currentColor" class="amount-indicator-icon">
             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
@@ -151,42 +256,21 @@
         </div>
       </div>
 
-      <!-- ── Section : Détails ── -->
+      <!-- ── DÉTAILS ── -->
       <div class="form-section">
         <h3 class="section-label">Détails</h3>
-
-        <div class="field-row">
-          <div class="field-group">
-            <label class="field-label">Lieu d'émission</label>
-            <input
-              type="text"
-              class="field-input"
-              placeholder="Ville"
-              :value="formState.lieu"
-              @input="setField('lieu', ($event.target as HTMLInputElement).value)"
-            />
-          </div>
-          <div class="field-group">
-            <label class="field-label">Bénéficiaire</label>
-            <input
-              type="text"
-              class="field-input"
-              placeholder="Nom du bénéficiaire"
-              :value="formState.beneficiaire"
-              @input="setField('beneficiaire', ($event.target as HTMLInputElement).value)"
-            />
-          </div>
+        <div class="field-group">
+          <label class="field-label">Lieu d'émission</label>
+          <input type="text" class="field-input" placeholder="Ville"
+            :value="formState.lieu"
+            @input="setField('lieu', ($event.target as HTMLInputElement).value)" />
         </div>
       </div>
 
-      <!-- ── Bouton Générer (avant génération) ── -->
+      <!-- ── BOUTON GÉNÉRER ── -->
       <div class="form-actions" v-if="count === 0">
-        <button
-          type="submit"
-          class="btn btn-primary"
-          :class="{ 'btn-disabled': !isValid }"
-          :disabled="!isValid"
-        >
+        <button type="submit" class="btn btn-primary"
+          :class="{ 'btn-disabled': !isValid }" :disabled="!isValid">
           <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor">
             <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/>
           </svg>
@@ -194,129 +278,80 @@
         </button>
       </div>
 
-      <!-- ── Section : Traites individuelles (après génération) ── -->
+      <!-- ── TRAITES INDIVIDUELLES ── -->
       <div v-if="traites.length > 0" class="form-section traites-section">
         <h3 class="section-label">
           Détails par traite
           <span class="section-count-badge">{{ traites.length }}</span>
         </h3>
-
         <div class="traites-list">
-          <div
-            v-for="(traite, i) in traites"
-            :key="traite.id"
-            class="traite-row"
-            :class="{ 'traite-row-active': currentIndex === i }"
-            @click="navigateTo(i)"
-          >
+          <div v-for="(traite, i) in traites" :key="traite.id"
+            class="traite-row" :class="{ 'traite-row-active': currentIndex === i }"
+            @click="navigateTo(i)">
             <div class="traite-row-header">
               <span class="traite-num-badge">{{ i + 1 }}</span>
               <span class="traite-row-num">{{ traite.numero }}</span>
               <span v-if="!traite.dateEcheance" class="traite-row-warning">
-                <svg viewBox="0 0 20 20" fill="currentColor" class="warning-icon">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="status-icon">
                   <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                 </svg>
                 Échéance manquante
               </span>
               <span v-else class="traite-row-ok">
-                <svg viewBox="0 0 20 20" fill="currentColor" class="ok-icon">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="status-icon">
                   <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                 </svg>
                 Complète
               </span>
             </div>
-
             <div class="traite-row-fields">
-              <!-- Date d'émission (readonly) -->
               <div class="field-group">
-                <label class="field-label field-label-sm">
-                  Date d'émission
-                  <span class="field-auto-badge">auto</span>
-                </label>
-                <input
-                  type="date"
-                  class="field-input field-input-sm field-input-readonly"
-                  :value="traite.dateEmission"
-                  readonly
-                  tabindex="-1"
-                />
+                <label class="field-label field-label-sm">Date d'émission <span class="field-auto-badge">auto</span></label>
+                <input type="date" class="field-input field-input-sm field-input-readonly"
+                  :value="traite.dateEmission" readonly tabindex="-1" />
               </div>
-
-              <!-- Date d'échéance -->
               <div class="field-group">
-                <label class="field-label field-label-sm">
-                  Date d'échéance
-                  <span class="required-star">*</span>
-                </label>
-                <input
-                  type="date"
-                  class="field-input field-input-sm"
+                <label class="field-label field-label-sm">Date d'échéance <span class="required-star">*</span></label>
+                <input type="date" class="field-input field-input-sm"
                   :class="{ 'field-input-required': !traite.dateEcheance }"
-                  :value="traite.dateEcheance"
-                  :min="traite.dateEmission"
+                  :value="traite.dateEcheance" :min="traite.dateEmission"
                   @input="updateTraiteField(i, 'dateEcheance', ($event.target as HTMLInputElement).value)"
-                  @click.stop
-                />
+                  @click.stop />
               </div>
-
-              <!-- Montant -->
               <div class="field-group">
                 <label class="field-label field-label-sm">Montant (DT)</label>
-                <input
-                  type="number"
-                  class="field-input field-input-sm"
-                  min="0"
-                  step="0.001"
+                <input type="number" class="field-input field-input-sm" min="0" step="0.001"
                   :value="traite.montant"
                   @input="updateTraiteField(i, 'montant', ($event.target as HTMLInputElement).value)"
-                  @click.stop
-                />
+                  @click.stop />
               </div>
             </div>
           </div>
         </div>
-
-        <!-- Barre total -->
         <div class="traites-total-bar">
           <span class="total-label">Total</span>
-          <span
-            class="total-value"
-            :class="{
-              'total-value-warn': Math.abs(traites.reduce((s, t) => s + t.montant, 0) - formState.montantTotal) > 0.001
-            }"
-          >
+          <span class="total-value"
+            :class="{ 'total-value-warn': Math.abs(traites.reduce((s, t) => s + t.montant, 0) - formState.montantTotal) > 0.001 }">
             {{ traites.reduce((sum, t) => sum + t.montant, 0).toFixed(3) }} DT
-            <span
-              v-if="Math.abs(traites.reduce((s, t) => s + t.montant, 0) - formState.montantTotal) > 0.001"
-              class="total-diff"
-            >
+            <span v-if="Math.abs(traites.reduce((s, t) => s + t.montant, 0) - formState.montantTotal) > 0.001" class="total-diff">
               (attendu : {{ formState.montantTotal.toFixed(3) }} DT)
             </span>
           </span>
         </div>
       </div>
 
-      <!-- ── Actions (après génération) ── -->
+      <!-- ── ACTIONS APRÈS GÉNÉRATION ── -->
       <div class="form-actions" v-if="count > 0">
-        <button
-          type="submit"
-          class="btn btn-primary"
-          :class="{ 'btn-disabled': !isValid }"
-          :disabled="!isValid"
-        >
+        <button type="submit" class="btn btn-primary"
+          :class="{ 'btn-disabled': !isValid }" :disabled="!isValid">
           <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
           </svg>
           Regénérer ({{ formState.nombreTraites }})
         </button>
-
-        <button
-          type="button"
-          class="btn btn-outline"
-          @click="handleSave"
-          :disabled="saving || !allEcheancesRemplies"
-          :title="!allEcheancesRemplies ? 'Toutes les dates d\'échéance sont requises' : ''"
-        >
+        <button type="button" class="btn btn-outline"
+          @click="handleSave" :disabled="saving || !allEcheancesRemplies"
+          :title="!allEcheancesRemplies ? 'Toutes les dates d\'échéance sont requises' : ''">
           <svg v-if="saving" class="btn-icon spin" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
           </svg>
@@ -325,13 +360,9 @@
           </svg>
           {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
         </button>
-
-        <button type="button" class="btn btn-ghost" @click="clearAll">
-          Réinitialiser
-        </button>
+        <button type="button" class="btn btn-ghost" @click="clearAll">Réinitialiser</button>
       </div>
 
-      <!-- Messages -->
       <Transition name="fade">
         <div v-if="error" class="message message-error">⚠ {{ error }}</div>
       </Transition>
@@ -343,30 +374,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useTraite } from '@/composables/useTraite';
 
 const {
-  formState,
-  traites,
-  count,
-  currentIndex,
-  isValid,
-  unitAmount,
-  saving,
-  error,
-  success,
-  setField,
-  generate,
-  updateTraiteField,
-  navigateTo,
-  clearAll,
-  save
+  societe, loadingSociete, loadingTiers, loadingComptes,
+  tiersFiltered, tiersSelectionne, comptesDisponibles, compteSelectionne,
+  formState, traites, currentIndex, count, isValid, unitAmount,
+  saving, error, success,
+  init, setField, generate, updateTraiteField, navigateTo, clearAll, save,
 } = useTraite();
 
-// Vérifie que toutes les traites ont une date d'échéance
+onMounted(() => init());
+
+const nomSociete = computed(() => {
+  const s = societe.value as any;
+  return s?.raisonSociale ?? s?.nom_societe ?? '—';
+});
+
 const allEcheancesRemplies = computed(() =>
-  traites.value.length > 0 && traites.value.every(t => !!t.dateEcheance)
+  traites.value.length > 0 && traites.value.every((t) => !!t.dateEcheance)
 );
 
 function handleGenerate(): void {
@@ -383,7 +410,10 @@ async function handleSave(): Promise<void> {
 </script>
 
 <style scoped lang="scss">
-// ── Type selector ──────────────────────────
+.mt-8  { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+
+// ── Type selector ────────────────────────────
 .type-selector {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -402,47 +432,134 @@ async function handleSave(): Promise<void> {
   transition: all 0.2s ease;
   text-align: left;
   font-family: inherit;
+  &:hover       { border-color: #7c3aed; background: #ede9fe; }
+  &-active      { border-color: #7c3aed; background: #ede9fe; box-shadow: 0 0 0 3px rgba(124,58,237,.12); }
+}
+.type-icon  { width: 22px; height: 22px; flex-shrink: 0; color: #7c3aed; }
+.type-label { font-size: 0.85rem; font-weight: 700; color: #1e1b4b; line-height: 1.2; }
+.type-desc  { font-size: 0.72rem; color: #6b7280; margin-top: 2px; }
 
-  &:hover {
-    border-color: #7c3aed;
-    background: #ede9fe;
-  }
-
-  &-active {
-    border-color: #7c3aed;
-    background: #ede9fe;
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
-  }
+// ── Blocs parties ────────────────────────────
+.partie-bloc {
+  background: #faf9ff;
+  border: 1.5px solid #e9e5f5;
+  border-radius: 10px;
+  padding: 12px 14px;
 }
 
-.type-icon {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  color: #7c3aed;
+.partie-titre {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
-.type-label {
-  font-size: 0.85rem;
+.partie-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: #1e1b4b;
-  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  &--tireur { background: #dbeafe; color: #1d4ed8; }
+  &--tire   { background: #fce7f3; color: #be185d; }
+  &--compte { background: #d1fae5; color: #065f46; }
 }
 
-.type-desc {
+.partie-role {
   font-size: 0.72rem;
   color: #6b7280;
-  margin-top: 2px;
+  font-style: italic;
 }
 
-// ── Champ monospace pour RIB ──────────────
-.field-input-mono {
-  font-family: 'Courier New', monospace;
-  letter-spacing: 0.5px;
+// ── Note bénéficiaire automatique ─────────────
+.info-auto-beneficiaire {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 9px 12px;
+  background: #eff6ff;
+  border: 1px solid rgba(59,130,246,.2);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #1e40af;
+  line-height: 1.4;
+
+  strong { font-weight: 700; }
+}
+.info-icon { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; }
+
+// ── Chips ────────────────────────────────────
+.societe-chip,
+.tiers-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 8px;
 }
 
-// ── Compte info bar ───────────────────────
-.compte-info-bar {
+.societe-chip {
+  background: #f0fdf4;
+  border: 1.5px solid rgba(5,150,105,.2);
+}
+
+.tiers-chip {
+  background: #eff6ff;
+  border: 1.5px solid rgba(59,130,246,.2);
+}
+
+.chip-icon {
+  width: 16px; height: 16px; flex-shrink: 0;
+  &--green { color: #059669; }
+  &--blue  { color: #2563eb; }
+}
+
+.chip-nom {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1e1b4b;
+}
+
+// ── Select ───────────────────────────────────
+.select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  &.select-loading .field-select { opacity: 0.6; }
+}
+
+.field-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 9px 36px 9px 12px;
+  border: 1.5px solid #d1c7f0;
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: #1e1b4b;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  &:focus   { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,.12); }
+  &:disabled { background: #f5f3ff; color: #9ca3af; cursor: not-allowed; }
+  &-mono { font-family: 'Courier New', monospace; font-size: 0.82rem; }
+}
+
+.select-chevron {
+  position: absolute;
+  right: 10px;
+  width: 16px; height: 16px;
+  color: #7c3aed;
+  pointer-events: none;
+}
+
+// ── Compte preview ───────────────────────────
+.compte-preview {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -450,21 +567,19 @@ async function handleSave(): Promise<void> {
   padding: 8px 12px;
   background: #ede9fe;
   border-radius: 8px;
-  border: 1px solid rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124,58,237,.2);
+  flex-wrap: wrap;
 }
 
-.compte-info-sep {
-  color: #c4b5fd;
-  font-weight: 300;
-}
+.compte-preview-sep { color: #c4b5fd; font-weight: 300; }
 
-.compte-info-item {
+.compte-preview-item {
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
 
-.compte-info-label {
+.compte-preview-label {
   font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -472,31 +587,47 @@ async function handleSave(): Promise<void> {
   color: #7c3aed;
 }
 
-.compte-info-value {
+.compte-preview-value {
   font-size: 0.82rem;
   font-weight: 700;
   color: #1e1b4b;
-
-  &.compte-rib {
-    font-family: 'Courier New', monospace;
-    font-size: 0.78rem;
-    letter-spacing: 0.5px;
-  }
+  &.rib { font-family: 'Courier New', monospace; font-size: 0.78rem; letter-spacing: 0.5px; }
 }
 
-// ── Required star ─────────────────────────
-.required-star {
-  color: #dc2626;
-  margin-left: 2px;
+// ── Skeleton ─────────────────────────────────
+.skeleton-wrap { padding: 10px 0; }
+.skeleton-bar {
+  display: block;
+  height: 14px;
+  width: 55%;
+  background: linear-gradient(90deg, #e9e5f5 25%, #d1c7f0 50%, #e9e5f5 75%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-// ── Section count badge ───────────────────
+.fill-empty { font-size: 0.78rem; color: #dc2626; font-style: italic; }
+
+// ── Hints ────────────────────────────────────
+.field-hint {
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: #6b7280;
+  &--warn { color: #d97706; }
+}
+
+.required-star { color: #dc2626; margin-left: 2px; }
+
+// ── Section count badge ───────────────────────
 .section-count-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 18px; height: 18px;
   background: #7c3aed;
   color: #fff;
   border-radius: 50%;
@@ -506,16 +637,9 @@ async function handleSave(): Promise<void> {
   vertical-align: middle;
 }
 
-// ── Traites individuelles ─────────────────
-.traites-section {
-  margin-top: 4px;
-}
-
-.traites-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+// ── Traites liste ────────────────────────────
+.traites-section { margin-top: 4px; }
+.traites-list { display: flex; flex-direction: column; gap: 10px; }
 
 .traite-row {
   border: 1.5px solid #e9e5f5;
@@ -524,17 +648,8 @@ async function handleSave(): Promise<void> {
   cursor: pointer;
   transition: all 0.15s ease;
   background: #f5f3ff;
-
-  &:hover {
-    border-color: #7c3aed;
-    background: #ede9fe;
-  }
-
-  &-active {
-    border-color: #7c3aed;
-    background: #ede9fe;
-    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
-  }
+  &:hover    { border-color: #7c3aed; background: #ede9fe; }
+  &-active   { border-color: #7c3aed; background: #ede9fe; box-shadow: 0 0 0 2px rgba(124,58,237,.15); }
 }
 
 .traite-row-header {
@@ -548,8 +663,7 @@ async function handleSave(): Promise<void> {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 22px; height: 22px;
   background: #7c3aed;
   color: #fff;
   border-radius: 50%;
@@ -576,7 +690,7 @@ async function handleSave(): Promise<void> {
   background: #fef2f2;
   padding: 2px 7px;
   border-radius: 20px;
-  border: 1px solid rgba(220, 38, 38, 0.2);
+  border: 1px solid rgba(220,38,38,.2);
 }
 
 .traite-row-ok {
@@ -589,14 +703,10 @@ async function handleSave(): Promise<void> {
   background: #ecfdf5;
   padding: 2px 7px;
   border-radius: 20px;
-  border: 1px solid rgba(5, 150, 105, 0.2);
+  border: 1px solid rgba(5,150,105,.2);
 }
 
-.warning-icon, .ok-icon {
-  width: 11px;
-  height: 11px;
-  flex-shrink: 0;
-}
+.status-icon { width: 11px; height: 11px; flex-shrink: 0; }
 
 .traite-row-fields {
   display: grid;
@@ -620,34 +730,13 @@ async function handleSave(): Promise<void> {
   font-size: 0.58rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
-.field-input-sm {
-  padding: 7px 10px !important;
-  font-size: 0.78rem !important;
-}
+.field-input-sm        { padding: 7px 10px !important; font-size: 0.78rem !important; }
+.field-input-readonly  { background: #f0edf9 !important; cursor: default; color: #6b7280 !important; }
+.field-input-required  { border-color: #dc2626 !important; background: #fef2f2 !important; }
 
-.field-input-readonly {
-  background: #f0edf9 !important;
-  cursor: default;
-  color: #6b7280 !important;
-  &:focus {
-    border-color: transparent !important;
-    box-shadow: none !important;
-  }
-}
-
-.field-input-required {
-  border-color: #dc2626 !important;
-  background: #fef2f2 !important;
-  &:focus {
-    border-color: #dc2626 !important;
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
-  }
-}
-
-// ── Barre total ───────────────────────────
+// ── Total ─────────────────────────────────────
 .traites-total-bar {
   display: flex;
   align-items: center;
@@ -656,7 +745,7 @@ async function handleSave(): Promise<void> {
   padding: 10px 14px;
   background: #ede9fe;
   border-radius: 8px;
-  border: 1px solid rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124,58,237,.2);
 }
 
 .total-label {
@@ -672,37 +761,34 @@ async function handleSave(): Promise<void> {
   font-weight: 800;
   color: #1e1b4b;
   font-family: 'Courier New', monospace;
-
-  &.total-value-warn {
-    color: #dc2626;
-  }
+  &.total-value-warn { color: #dc2626; }
 }
 
-.total-diff {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: #dc2626;
-  margin-left: 6px;
-}
+.total-diff { font-size: 0.72rem; color: #dc2626; margin-left: 6px; }
 
-// ── Spin ──────────────────────────────────
-.spin {
-  animation: spin 1s linear infinite;
+// ── Amount indicator ──────────────────────────
+.amount-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #eff6ff;
+  border-radius: 8px;
+  border: 1px solid rgba(59,130,246,.2);
+  font-size: 0.78rem;
+  color: #1e40af;
 }
+.amount-indicator-icon { width: 14px; height: 14px; flex-shrink: 0; }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
+// ── Spin ──────────────────────────────────────
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-// ── Responsive ────────────────────────────
+// ── Responsive ────────────────────────────────
 @media (max-width: 640px) {
-  .traite-row-fields {
-    grid-template-columns: 1fr;
-  }
-
-  .type-selector {
-    grid-template-columns: 1fr;
-  }
+  .traite-row-fields { grid-template-columns: 1fr; }
+  .type-selector     { grid-template-columns: 1fr; }
+  .compte-preview    { flex-direction: column; align-items: flex-start; gap: 6px; }
 }
 </style>

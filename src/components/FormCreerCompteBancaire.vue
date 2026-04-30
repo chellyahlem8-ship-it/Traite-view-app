@@ -27,7 +27,7 @@
           Informations du compte
         </h3>
 
-        <!-- RIB -->
+        <!-- RIB — saisie contrôlée 20 chiffres -->
         <div class="field-group">
           <label class="field-label">
             RIB <span class="required-star">*</span>
@@ -41,15 +41,42 @@
                 clip-rule="evenodd" />
             </svg>
             <input
-              :value="modelValue.rib"
+              :value="ribDisplay"
               type="text"
-              class="field-input field-input--icon"
-              :class="{ 'field-input--error': errors?.rib }"
-              placeholder="Ex : 12 345 0012345678901 23"
-              @input="patch('rib', ($event.target as HTMLInputElement).value)"
+              inputmode="numeric"
+              class="field-input field-input--icon field-input--mono"
+              :class="{
+                'field-input--error':   errors?.rib || ribLocalError,
+                'field-input--success': ribDigits.length === RIB_LENGTH && !errors?.rib,
+              }"
+              placeholder="XX XXXX XXXXXXXXXXXXXXXX"
+              maxlength="24"
+              autocomplete="off"
+              @input="handleRibInput"
+              @keydown="handleRibKeydown"
+              @paste="handleRibPaste"
+            />
+            <!-- Compteur de chiffres -->
+            <span class="rib-counter" :class="{ 'rib-counter--done': ribDigits.length === RIB_LENGTH, 'rib-counter--error': ribDigits.length > 0 && ribDigits.length !== RIB_LENGTH }">
+              {{ ribDigits.length }}&thinsp;/&thinsp;{{ RIB_LENGTH }}
+            </span>
+          </div>
+
+          <!-- Barre de progression -->
+          <div class="rib-progress-track">
+            <div
+              class="rib-progress-bar"
+              :class="{ 'rib-progress-bar--done': ribDigits.length === RIB_LENGTH }"
+              :style="{ width: `${(ribDigits.length / RIB_LENGTH) * 100}%` }"
             />
           </div>
-          <span v-if="errors?.rib" class="field-error-text">{{ errors.rib }}</span>
+
+          <span v-if="errors?.rib || ribLocalError" class="field-error-text">
+            {{ errors?.rib ?? ribLocalError }}
+          </span>
+          <span v-else class="field-hint">
+            20 chiffres uniquement — les espaces sont ajoutés automatiquement
+          </span>
         </div>
 
         <!-- Adresse agence -->
@@ -86,7 +113,6 @@
           Banque
         </h3>
 
-        <!-- Select Banque (dynamique) -->
         <div class="field-group">
           <label class="field-label">
             Banque <span class="required-star">*</span>
@@ -120,9 +146,7 @@
                 stroke-linecap="round" d="M12 2a10 10 0 0110 10" />
             </svg>
           </div>
-          <span v-if="errors?.banque_id" class="field-error-text">
-            {{ errors.banque_id }}
-          </span>
+          <span v-if="errors?.banque_id" class="field-error-text">{{ errors.banque_id }}</span>
         </div>
       </section>
 
@@ -133,7 +157,6 @@
           Titulaire
         </h3>
 
-        <!-- Select type de titulaire (statique) -->
         <div class="field-group">
           <label class="field-label">
             Type de titulaire <span class="required-star">*</span>
@@ -146,11 +169,7 @@
               @change="patch('titulaire_type', ($event.target as HTMLSelectElement).value)"
             >
               <option value="" disabled>-- Sélectionner un type --</option>
-              <option
-                v-for="t in TITULAIRE_TYPES"
-                :key="t.value"
-                :value="t.value"
-              >
+              <option v-for="t in TITULAIRE_TYPES" :key="t.value" :value="t.value">
                 {{ t.label }}
               </option>
             </select>
@@ -162,12 +181,9 @@
                 clip-rule="evenodd" />
             </svg>
           </div>
-          <span v-if="errors?.titulaire_type" class="field-error-text">
-            {{ errors.titulaire_type }}
-          </span>
+          <span v-if="errors?.titulaire_type" class="field-error-text">{{ errors.titulaire_type }}</span>
         </div>
 
-        <!-- Select titulaire (dynamique, conditionnel) -->
         <div v-if="modelValue.titulaire_type" class="field-group">
           <label class="field-label">
             Titulaire <span class="required-star">*</span>
@@ -183,11 +199,7 @@
               <option value="" disabled>
                 {{ loadingTitulaires ? 'Chargement…' : '-- Sélectionner un titulaire --' }}
               </option>
-              <option
-                v-for="t in titulaires"
-                :key="t.id"
-                :value="t.id"
-              >
+              <option v-for="t in titulaires" :key="t.id" :value="t.id">
                 {{ t.label }}
               </option>
             </select>
@@ -205,9 +217,7 @@
                 stroke-linecap="round" d="M12 2a10 10 0 0110 10" />
             </svg>
           </div>
-          <span v-if="errors?.titulaire_id" class="field-error-text">
-            {{ errors.titulaire_id }}
-          </span>
+          <span v-if="errors?.titulaire_id" class="field-error-text">{{ errors.titulaire_id }}</span>
         </div>
       </section>
 
@@ -230,12 +240,7 @@
           </span>
         </button>
 
-        <button
-          type="button"
-          class="btn btn--outline"
-          :disabled="loading"
-          @click="emit('cancel')"
-        >
+        <button type="button" class="btn btn--outline" :disabled="loading" @click="emit('cancel')">
           Annuler
         </button>
       </div>
@@ -247,40 +252,52 @@
 <script setup lang="ts">
 // ─────────────────────────────────────────────────────────────────────
 //  FormCreerCompteBancaire.vue  –  Composant 100 % présentationnel
-//  ➜ Aucune logique API, aucun store, aucun onMounted
-//  ➜ Toute la logique métier est gérée par le parent (CreateCompteBancaire.vue)
+//  RIB : saisie contrôlée — 20 chiffres, formaté XX XXXX XXXXXXXXXXXXXXXX
 // ─────────────────────────────────────────────────────────────────────
+import { ref, computed, watch } from 'vue'
 import type { SelectOption } from '@/composables/useComptesBancaires'
-import { TITULAIRE_TYPES } from '@/composables/useComptesBancaires'
-import type { Banque } from '@/types/banques'
+import { TITULAIRE_TYPES }   from '@/composables/useComptesBancaires'
+import type { Banque }       from '@/types/banques'
+
+// ── Constante RIB ─────────────────────────────────────────────────────
+const RIB_LENGTH = 20
+
+// ── Format d'affichage : "XX XXXX XXXXXXXXXXXXXXXX" (2-4-14) ─────────
+// Groupe 1 : 2 chiffres | Groupe 2 : 4 chiffres | Groupe 3 : 14 chiffres
+function formatRib(digits: string): string {
+  const d = digits.slice(0, RIB_LENGTH)
+  const p1 = d.slice(0, 2)
+  const p2 = d.slice(2, 6)
+  const p3 = d.slice(6)
+  return [p1, p2, p3].filter(Boolean).join(' ')
+}
 
 // ── Types exportés ────────────────────────────────────────────────────
-
 export interface CompteBancaireFormData {
-  rib:             string
-  adresse_agence:  string
-  banque_id:       number | ''
-  titulaire_type:  string
-  titulaire_id:    number | ''
+  rib:            string
+  adresse_agence: string
+  banque_id:      number | ''
+  titulaire_type: string
+  titulaire_id:   number | ''
 }
 
 export interface CompteBancaireFormErrors {
-  rib?:             string
-  adresse_agence?:  string
-  banque_id?:       string
-  titulaire_type?:  string
-  titulaire_id?:    string
+  rib?:            string
+  adresse_agence?: string
+  banque_id?:      string
+  titulaire_type?: string
+  titulaire_id?:   string
 }
 
 // ── Props ─────────────────────────────────────────────────────────────
 const props = withDefaults(
   defineProps<{
-    modelValue:        CompteBancaireFormData
-    loading?:          boolean
-    errors?:           CompteBancaireFormErrors
-    banques?:          Banque[]
-    loadingBanques?:   boolean
-    titulaires?:       SelectOption[]
+    modelValue:         CompteBancaireFormData
+    loading?:           boolean
+    errors?:            CompteBancaireFormErrors
+    banques?:           Banque[]
+    loadingBanques?:    boolean
+    titulaires?:        SelectOption[]
     loadingTitulaires?: boolean
   }>(),
   {
@@ -300,7 +317,101 @@ const emit = defineEmits<{
   (e: 'cancel'): void
 }>()
 
-// ── Helpers ───────────────────────────────────────────────────────────
+// ── État local RIB ────────────────────────────────────────────────────
+// On travaille uniquement sur les chiffres bruts (sans espaces)
+const ribDigits    = ref<string>(props.modelValue.rib.replace(/\D/g, '').slice(0, RIB_LENGTH))
+const ribLocalError = ref<string>('')
+
+// Affichage formaté dans l'input
+const ribDisplay = computed(() => formatRib(ribDigits.value))
+
+// Synchronise depuis l'extérieur (ex : resetForm)
+watch(
+  () => props.modelValue.rib,
+  (val) => {
+    const cleaned = val.replace(/\D/g, '').slice(0, RIB_LENGTH)
+    if (cleaned !== ribDigits.value) {
+      ribDigits.value = cleaned
+      ribLocalError.value = ''
+    }
+  }
+)
+
+// ── Handlers RIB ──────────────────────────────────────────────────────
+
+/** Filtre la frappe : on n'accepte que les chiffres (0-9) */
+function handleRibKeydown(e: KeyboardEvent): void {
+  const allowed = [
+    'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+    'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+    'Home', 'End',
+  ]
+  if (allowed.includes(e.key)) return
+  // Ctrl/Cmd + A/C/V/X → laisser passer
+  if ((e.ctrlKey || e.metaKey) && ['a','c','v','x'].includes(e.key.toLowerCase())) return
+  // Bloquer tout ce qui n'est pas un chiffre
+  if (!/^\d$/.test(e.key)) {
+    e.preventDefault()
+    shakeInput()
+  }
+}
+
+/** Traite la saisie caractère par caractère */
+function handleRibInput(e: Event): void {
+  const input  = e.target as HTMLInputElement
+  // On extrait uniquement les chiffres de ce qui est tapé
+  const digits = input.value.replace(/\D/g, '').slice(0, RIB_LENGTH)
+  ribDigits.value = digits
+  ribLocalError.value = ''
+
+  // On remet la valeur formatée dans l'input (cursor à la fin)
+  // nextTick n'est pas dispo sans import — on le fait directement
+  const formatted = formatRib(digits)
+  input.value = formatted
+
+  emitRib(digits)
+  validateRibLength(digits)
+}
+
+/** Gère le collage : ne garde que les chiffres */
+function handleRibPaste(e: ClipboardEvent): void {
+  e.preventDefault()
+  const pasted = e.clipboardData?.getData('text') ?? ''
+  const digits = (ribDigits.value + pasted.replace(/\D/g, '')).slice(0, RIB_LENGTH)
+  ribDigits.value = digits
+  ribLocalError.value = ''
+
+  // Mettre à jour l'input manuellement
+  const input = e.target as HTMLInputElement
+  input.value = formatRib(digits)
+
+  emitRib(digits)
+  validateRibLength(digits)
+}
+
+/** Émet le RIB brut (20 chiffres sans espaces) vers le parent */
+function emitRib(digits: string): void {
+  emit('update:modelValue', { ...props.modelValue, rib: digits })
+}
+
+/** Valide la longueur quand le champ perd le focus ou à la saisie */
+function validateRibLength(digits: string): void {
+  if (digits.length > 0 && digits.length < RIB_LENGTH) {
+    ribLocalError.value = `Le RIB doit contenir exactement ${RIB_LENGTH} chiffres (${digits.length}/${RIB_LENGTH}).`
+  } else if (digits.length === RIB_LENGTH) {
+    ribLocalError.value = ''
+  }
+}
+
+/** Animation de secouement quand une touche invalide est pressée */
+const ribShaking = ref(false)
+function shakeInput(): void {
+  if (ribShaking.value) return
+  ribShaking.value = true
+  setTimeout(() => { ribShaking.value = false }, 400)
+}
+
+// ── Patch générique ───────────────────────────────────────────────────
 function patch<K extends keyof CompteBancaireFormData>(
   key: K,
   value: CompteBancaireFormData[K]
@@ -321,6 +432,9 @@ function patch<K extends keyof CompteBancaireFormData>(
   --clr-muted:         #6b7280;
   --clr-error:         #dc2626;
   --clr-error-bg:      #fef2f2;
+  --clr-success:       #059669;
+  --clr-success-bg:    #ecfdf5;
+  --clr-success-border:#6ee7b7;
   --radius-sm:         8px;
   --radius-md:         12px;
   --radius-lg:         16px;
@@ -360,19 +474,8 @@ function patch<K extends keyof CompteBancaireFormData>(
 }
 .header-icon svg { width: 22px; height: 22px; }
 
-.form-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--clr-text);
-  margin: 0 0 2px;
-  letter-spacing: -0.01em;
-}
-
-.form-subtitle {
-  font-size: 13px;
-  color: var(--clr-muted);
-  margin: 0;
-}
+.form-title   { font-size: 17px; font-weight: 700; color: var(--clr-text); margin: 0 0 2px; letter-spacing: -0.01em; }
+.form-subtitle { font-size: 13px; color: var(--clr-muted); margin: 0; }
 
 /* ── Body / Sections ──────────────────────────────────────────────────── */
 .form-body    { display: flex; flex-direction: column; gap: 24px; }
@@ -399,15 +502,15 @@ function patch<K extends keyof CompteBancaireFormData>(
 }
 
 /* ── Fields ───────────────────────────────────────────────────────────── */
-.field-group   { display: flex; flex-direction: column; gap: 5px; }
+.field-group  { display: flex; flex-direction: column; gap: 5px; }
 
-.field-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--clr-text);
-}
-
+.field-label  { font-size: 13px; font-weight: 600; color: var(--clr-text); }
 .required-star { color: var(--clr-error); margin-left: 2px; }
+
+.field-hint {
+  font-size: 11.5px;
+  color: var(--clr-muted);
+}
 
 .field-input {
   width: 100%;
@@ -430,12 +533,33 @@ function patch<K extends keyof CompteBancaireFormData>(
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
 }
 
-.field-input--error { border-color: var(--clr-error) !important; background: var(--clr-error-bg); }
-.field-input--error:focus { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important; }
+.field-input--error {
+  border-color: var(--clr-error) !important;
+  background: var(--clr-error-bg);
+}
+.field-input--error:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+}
+
+.field-input--success {
+  border-color: var(--clr-success) !important;
+  background: var(--clr-success-bg);
+}
+.field-input--success:focus {
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12) !important;
+}
+
+/* Monospace pour le RIB */
+.field-input--mono {
+  font-family: 'Courier New', 'Courier', monospace;
+  font-size: 15px;
+  letter-spacing: 1.5px;
+  padding-right: 56px; /* espace pour le compteur */
+}
 
 .field-error-text { font-size: 12px; color: var(--clr-error); }
 
-/* Input avec icône ──────────────────────────────── */
+/* ── Input avec icône ─────────────────────────────────────────────────── */
 .input-wrapper { position: relative; }
 
 .input-icon {
@@ -453,7 +577,45 @@ function patch<K extends keyof CompteBancaireFormData>(
 .field-input--icon { padding-left: 38px; }
 .input-wrapper:focus-within .input-icon { color: var(--clr-primary-light); }
 
-/* Select ────────────────────────────────────────── */
+/* ── Compteur RIB ─────────────────────────────────────────────────────── */
+.rib-counter {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--clr-muted);
+  pointer-events: none;
+  transition: color var(--transition);
+  background: #f5f3ff;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.rib-counter--done  { color: var(--clr-success); background: #d1fae5; }
+.rib-counter--error { color: var(--clr-error);   background: #fee2e2; }
+
+/* ── Barre de progression RIB ─────────────────────────────────────────── */
+.rib-progress-track {
+  height: 3px;
+  background: #ede9fe;
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.rib-progress-bar {
+  height: 100%;
+  background: var(--clr-primary-light);
+  border-radius: 99px;
+  transition: width 0.15s ease, background-color 0.2s ease;
+}
+
+.rib-progress-bar--done { background: var(--clr-success); }
+
+/* ── Select ───────────────────────────────────────────────────────────── */
 .select-wrapper { position: relative; }
 
 .field-input--select {
@@ -542,9 +704,9 @@ function patch<K extends keyof CompteBancaireFormData>(
 
 .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
-.btn-inner          { display: flex; align-items: center; gap: 8px; }
-.btn-icon           { width: 16px; height: 16px; flex-shrink: 0; }
-.btn-icon--spin     { animation: spin 0.8s linear infinite; }
+.btn-inner      { display: flex; align-items: center; gap: 8px; }
+.btn-icon       { width: 16px; height: 16px; flex-shrink: 0; }
+.btn-icon--spin { animation: spin 0.8s linear infinite; }
 
 /* ── Animations ───────────────────────────────────────────────────────── */
 @keyframes spin {
@@ -561,7 +723,7 @@ function patch<K extends keyof CompteBancaireFormData>(
     border-right: none;
     box-shadow: none;
   }
-  .form-actions      { flex-direction: column; }
-  .btn--outline      { order: 1; }
+  .form-actions { flex-direction: column; }
+  .btn--outline { order: 1; }
 }
 </style>

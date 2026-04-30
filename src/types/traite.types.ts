@@ -1,21 +1,53 @@
-// ── Types backend ────────────────────────────────────────────────
-
 export type TypeTraite = 'fournisseur' | 'client';
 
-/** Données du formulaire de création */
+export interface Societe {
+  id?: number;
+  idSociete?: number;
+  raisonSociale: string;   // ✅ FIX : nom réel du champ backend
+  nom_societe?: string;    // garde pour compatibilité
+  adresse?: string;
+  email?: string;
+  telephone?: number;
+}
+
+export interface Tier {
+  id: number;
+  raison_sociale: string;
+  email?: string;
+  adresse?: string;
+  num_tel?: number;
+  types_tiers_id: number;
+  idSociete: number;
+  type_tiers?: { id: number; type: string };
+  comptes_bancaires?: CompteBancaire[];
+}
+
+export interface CompteBancaire {
+  id: number;
+  rib: string;
+  adresse_agence?: string;
+  banque_id: number;
+  titulaire_id: number;
+  titulaire_type: string;
+  banque?: { id: number; nomBanque: string };
+}
+
 export interface TraiteFormData {
   typeTraite: TypeTraite;
-  // Champs libres (plus de sélection depuis le backend)
-  tireurNom: string;          // Nom du tiers (saisie libre)
-  banqueNom: string;          // Nom de la banque (saisie libre)
-  rib: string;                // RIB (saisie libre)
+  tiersSelectionneId: number | null;
+  compteBancaireId: number | null;
+  tireurNom: string;
+  tireurAdresse: string;
+  tireNom: string;
+  tireAdresse: string;
+  banqueNom: string;
+  rib: string;
+  beneficiaire: string;
   montantTotal: number;
   nombreTraites: number;
   lieu: string;
-  beneficiaire: string;
 }
 
-/** Une traite individuelle dans la série (côté frontend) */
 export interface TraiteItem {
   id: string;
   index: number;
@@ -24,28 +56,27 @@ export interface TraiteItem {
   typeTraite: TypeTraite;
   montant: number;
   montantLettres: string;
-  dateEmission: string;       // YYYY-MM-DD (today)
-  dateEcheance: string;       // YYYY-MM-DD (éditable)
+  dateEmission: string;
+  dateEcheance: string;
   lieu: string;
   beneficiaire: string;
   tireurNom: string;
+  tireNom: string;
   banqueNom: string;
   rib: string;
 }
 
-/** Payload envoyé au backend (une traite à la fois) */
 export interface SaveTraitePayload {
   montant: number;
   type_traite: TypeTraite;
   date_emission: string;
   date_echeance: string;
-  tireur_nom: string;
-  banque_nom: string;
-  rib: string;
-  statuts_traites_id?: number;
+  comptes_bancaires_id: number;
+  statuts_traites_id: number;
+  tireur_id: number;
+  tireur_type: string;
 }
 
-/** Statut traite depuis le backend */
 export interface StatutTraite {
   id: number;
   statut: string;

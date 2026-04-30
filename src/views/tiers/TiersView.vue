@@ -70,7 +70,7 @@
               <tr>
                 <th></th>
                 <th>NOM DU TIERS</th>
-                <th>COMPTE BANCAIRE</th>
+                <th>COMPTES BANCAIRES</th>
                 <th>ADRESSE</th>
                 <th>TÉLÉPHONE</th>
                 <th></th>
@@ -94,12 +94,19 @@
                   <span class="tier-type">{{ tier.type_tiers?.type ?? '' }}</span>
                 </td>
 
-                <!-- ✅ Compte bancaire — lu directement depuis tier.comptesBancaires -->
+                <!-- ✅ TOUS les comptes bancaires du tiers -->
                 <td class="td-bank">
                   <template v-if="tier.comptes_bancaires && tier.comptes_bancaires.length > 0">
-  <span class="bank-name">{{ tier.comptes_bancaires[0].banque?.nomBanque }}</span>
-  <span class="bank-rib">{{ tier.comptes_bancaires[0].rib }}</span>
-</template>
+                    <div
+                      v-for="(compte, idx) in tier.comptes_bancaires"
+                      :key="compte.id"
+                      class="bank-entry"
+                      :class="{ 'bank-entry--separator': idx > 0 }"
+                    >
+                      <span class="bank-name">{{ compte.banque?.nomBanque ?? '—' }}</span>
+                      <span class="bank-rib">{{ compte.rib }}</span>
+                    </div>
+                  </template>
                   <span v-else class="no-data">—</span>
                 </td>
 
@@ -136,10 +143,10 @@ import { tiersApi, type Tier } from '@/api/tiers.api'
 const router = useRouter()
 
 // ── État ─────────────────────────────────────────────────────
-const tiers         = ref<Tier[]>([])
-const loading       = ref(false)
-const toastMsg      = ref<string | null>(null)
-const toastType     = ref<'success' | 'error'>('success')
+const tiers          = ref<Tier[]>([])
+const loading        = ref(false)
+const toastMsg       = ref<string | null>(null)
+const toastType      = ref<'success' | 'error'>('success')
 const selectedTierId = ref<number | null>(null)
 
 // ── Stats rapides ────────────────────────────────────────────
@@ -242,19 +249,9 @@ onMounted(fetchAll)
   box-shadow: 0 4px 12px rgba(109, 40, 217, 0.25);
 }
 
-.stat-icon { font-size: 24px; }
-
-.stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 12px;
-  opacity: 0.85;
-  margin-top: 2px;
-}
+.stat-icon  { font-size: 24px; }
+.stat-value { font-size: 22px; font-weight: 700; line-height: 1; }
+.stat-label { font-size: 12px; opacity: 0.85; margin-top: 2px; }
 
 /* ── Toast ──────────────────────────────────────────────────── */
 .toast {
@@ -395,7 +392,7 @@ onMounted(fetchAll)
   }
 }
 
-/* Cellules spécifiques */
+/* ── Cellules spécifiques ────────────────────────────────────── */
 .td-avatar { width: 52px; }
 
 .avatar {
@@ -417,9 +414,46 @@ onMounted(fetchAll)
   .tier-type { display: block; font-size: 12px; color: #9ca3af; margin-top: 2px; }
 }
 
+/* ── Comptes bancaires — tous les comptes empilés ─────────────── */
 .td-bank {
-  .bank-name { display: block; font-weight: 500; color: #374151; }
-  .bank-rib  { display: block; font-size: 12px; color: #9ca3af; font-family: monospace; margin-top: 2px; }
+  vertical-align: middle;
+  min-width: 180px;
+}
+
+.bank-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  transition: background 0.12s;
+
+  /* Séparateur visuel entre deux comptes */
+  &--separator {
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed #e9e5f5;
+  }
+
+  &:hover {
+    background: #f5f3ff;
+  }
+}
+
+.bank-name {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  color: #1e1b4b;
+}
+
+.bank-rib {
+  display: block;
+  font-size: 11px;
+  color: #7c3aed;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+  margin-top: 1px;
 }
 
 .no-data { color: #d1d5db; }
