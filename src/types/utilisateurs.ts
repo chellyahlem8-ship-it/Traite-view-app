@@ -5,7 +5,7 @@ export interface Utilisateur {
   role: string
   email: string
   idSociete: number
-  societe?: { idSociete: number; nomSociete: string }
+  societe?: { idSociete: number; nomSociete?: string; raisonSociale?: string }
   created_at?: string
   updated_at?: string
 }
@@ -19,7 +19,14 @@ export interface CreateUtilisateurPayload {
   idSociete: number | null
 }
 
+// Accepte nomSociete OU raisonSociale selon ce que renvoie votre backend
 export interface Societe {
   idSociete: number
-  nomSociete: string
+  nomSociete?: string
+  raisonSociale?: string
+}
+
+/** Retourne le nom lisible d'une société quelle que soit la clé utilisée */
+export function getSocieteName(s: Societe): string {
+  return s.nomSociete ?? s.raisonSociale ?? `Société #${s.idSociete}`
 }

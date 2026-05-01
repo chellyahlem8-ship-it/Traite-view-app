@@ -14,7 +14,7 @@ export interface AuthUser {
 
 export interface AuthResponse {
   success: boolean
-  access_token: string
+  access_token: string            // ✅ corrigé
   token_type: string
   utilisateur: AuthUser
 }
@@ -24,7 +24,7 @@ export interface ForgotPasswordPayload {
 }
 
 export interface ResetPasswordPayload {
-  email: string        // ← ajouté
+  email: string
   token: string
   new_password: string
   confirm_password: string

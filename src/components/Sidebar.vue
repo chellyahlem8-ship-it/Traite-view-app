@@ -11,63 +11,40 @@
 
   <!-- Sidebar -->
   <aside class="sidebar" :class="{ 'sidebar--open': isOpen }">
+
+    <!-- LOGO : fixe en haut -->
     <div class="sidebar-logo">
       <TraityLogo :size="28" show-text />
     </div>
 
+    <!-- NAV : scrollable si contenu dépasse -->
     <nav class="sidebar-nav">
-      <router-link
-        to="/dashboard"
-        class="nav-item"
-        active-class="active"
-        @click="closeSidebar"
-      >
+      <router-link to="/dashboard" class="nav-item" active-class="active" @click="closeSidebar">
         <span class="nav-icon">🏠</span> Tableau de bord
       </router-link>
 
-      <router-link
-        :to="{ name: 'Traites' }"
-        class="nav-item"
-        active-class="active"
-        @click="closeSidebar"
-      >
+      <router-link :to="{ name: 'Traites' }" class="nav-item" active-class="active" @click="closeSidebar">
         <span class="nav-icon">📄</span> Traites
       </router-link>
 
 
-      <router-link
-        :to="{ name: 'Tiers' }"
-        class="nav-item"
-        active-class="active"
-        @click="closeSidebar"
-      >
+      <router-link :to="{ name: 'Tiers' }" class="nav-item" active-class="active" @click="closeSidebar">
         <span class="nav-icon">👥</span> Tiers
       </router-link>
 
-      <router-link
-        :to="{ name: 'CreateUtilisateur' }"
-        class="nav-item"
-        active-class="active"
-        @click="closeSidebar"
-      >
+      <router-link :to="{ name: 'Societe' }" class="nav-item" active-class="active" @click="closeSidebar">
+        <span class="nav-icon">🏢</span> Société
+      </router-link>
+
+      <router-link :to="{ name: 'Utilisateurs' }" class="nav-item" active-class="active" @click="closeSidebar">
         <span class="nav-icon">👤</span> Utilisateurs
       </router-link>
 
-      <router-link
-        :to="{ name: 'BanquesCreate' }"
-        class="nav-item"
-        active-class="active"
-        @click="closeSidebar"
-      >
+      <router-link :to="{ name: 'BanquesCreate' }" class="nav-item" active-class="active" @click="closeSidebar">
         <span class="nav-icon">🏦</span> Banques
       </router-link>
 
-      <router-link
-        :to="{ name: 'CreateCompteBancaire' }"
-        class="nav-item"
-        active-class="active"
-        @click="closeSidebar"
-      >
+      <router-link :to="{ name: 'CreateCompteBancaire' }" class="nav-item" active-class="active" @click="closeSidebar">
         <span class="nav-icon">💳</span> Comptes bancaires
       </router-link>
       <router-link
@@ -89,9 +66,13 @@
       
     </nav>
 
-    <button class="logout-btn" @click="handleLogout">
-      <span>🚪</span> Déconnexion
-    </button>
+    <!-- LOGOUT : fixe en bas, jamais caché -->
+    <div class="sidebar-footer">
+      <button class="logout-btn" @click="handleLogout">
+        <span>🚪</span> Déconnexion
+      </button>
+    </div>
+
   </aside>
 </template>
 
@@ -111,7 +92,6 @@ const closeSidebar  = () => { isOpen.value = false }
 <style scoped lang="scss">
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
-/* ── Hamburger ───────────────────────────────────────────────── */
 .hamburger-btn {
   display: none;
   position: fixed;
@@ -131,64 +111,87 @@ const closeSidebar  = () => { isOpen.value = false }
   padding: 0;
   box-shadow: 0 4px 16px rgba(76, 29, 149, 0.5);
   isolation: isolate;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
 }
 
 .hamburger-line {
   display: block;
   width: 22px;
-  height: 2.5px;
-  background: #fff;
+  height: 2px;
+  background: white;
   border-radius: 2px;
-  transition: all 0.25s ease;
-  transform-origin: center;
+  transition: all 0.3s ease;
 
-  &.open:nth-child(1) { transform: translateY(7px)  rotate(45deg);  }
-  &.open:nth-child(2) { opacity: 0; transform: scaleX(0);           }
+  &.open:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  &.open:nth-child(2) { opacity: 0; }
   &.open:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 }
 
-/* ── Overlay ─────────────────────────────────────────────────── */
 .sidebar-overlay {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 150;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9998;
   opacity: 0;
-  transition: opacity 0.25s ease;
-  pointer-events: none;
+  transition: opacity 0.3s ease;
 
-  &.visible {
-    opacity: 1;
-    pointer-events: auto;
+  @media (max-width: 768px) {
+    display: block;
+    pointer-events: none;
+
+    &.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
 }
 
-/* ── Sidebar ─────────────────────────────────────────────────── */
 .sidebar {
-  width: 240px;
-  background: linear-gradient(180deg, #4c1d95 0%, #6d28d9 60%, #8b5cf6 100%);
-  display: flex;
-  flex-direction: column;
-  padding: 24px 16px;
   position: fixed;
   top: 0;
   left: 0;
+  width: 240px;
   height: 100vh;
-  z-index: 200;
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(180deg, #2e1065 0%, #4c1d95 100%);
+  /* ✅ Clé : flex column pour pousser le footer tout en bas */
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+  box-shadow: 4px 0 24px rgba(76, 29, 149, 0.3);
+  font-family: 'Outfit', sans-serif;
+  overflow: hidden; /* pas de scroll global sur la sidebar */
+
+  @media (max-width: 768px) {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    &--open { transform: translateX(0); }
+  }
 }
 
 .sidebar-logo {
-  margin-bottom: 36px;
-  :deep(.traity-name) { color: #fff; }
+  flex-shrink: 0; /* ne rétrécit jamais */
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-nav {
+  flex: 1;           /* prend tout l'espace disponible entre logo et footer */
+  overflow-y: auto;  /* scroll uniquement dans la nav si trop d'items */
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: 1;
+  gap: 2px;
+  padding: 12px 10px;
+
+  /* Scrollbar discrète */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+  &::-webkit-scrollbar { width: 3px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
 }
 
 .nav-item {
@@ -198,65 +201,63 @@ const closeSidebar  = () => { isOpen.value = false }
   padding: 10px 14px;
   border-radius: 10px;
   color: rgba(255, 255, 255, 0.75);
-  font-size: 14px;
-  font-family: 'Outfit', sans-serif;
-  cursor: pointer;
-  transition: all 0.2s;
   text-decoration: none;
-  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
   border: none;
+  background: transparent;
   width: 100%;
   text-align: left;
+  font-family: 'Outfit', sans-serif;
+  flex-shrink: 0;
 
   &:hover:not([disabled]) {
-    background: rgba(255, 255, 255, 0.12);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
   }
 
   &.active {
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
     font-weight: 600;
   }
 
   &[disabled] {
-    opacity: 0.45;
+    opacity: 0.4;
     cursor: not-allowed;
   }
+}
 
-  .nav-icon { font-size: 16px; }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+/* ✅ Footer toujours collé en bas */
+.sidebar-footer {
+  flex-shrink: 0;
+  padding: 12px 10px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .logout-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff;
-  border-radius: 10px;
+  gap: 10px;
   padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.2);
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s ease;
   font-family: 'Outfit', sans-serif;
-  transition: background 0.2s;
-  margin-top: auto;
+  width: 100%;
 
-  &:hover { background: rgba(255, 255, 255, 0.2); }
-}
-
-/* ── Responsive ──────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .hamburger-btn    { display: flex; }
-  .sidebar-overlay  { display: block; }
-
-  .sidebar {
-    transform: translateX(-100%);
-    &.sidebar--open { transform: translateX(0); }
+  &:hover {
+    background: rgba(239, 68, 68, 0.25);
+    color: #fecaca;
   }
-}
-
-@supports (padding-top: env(safe-area-inset-top)) {
-  .hamburger-btn { top: env(safe-area-inset-top); }
 }
 </style>
