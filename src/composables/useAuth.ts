@@ -14,13 +14,25 @@ export function useAuth() {
   async function login(payload: LoginPayload) {
     loading.value = true
     errorMsg.value = null
+
     try {
       const response = await authApi.login(payload)
-      localStorage.setItem('traity_token', response.access_token)
-      authStore.setAuth(response.access_token, response.utilisateur)
+
+      // ✅ Vérification sécurité
+      if (!response.token) {
+        throw new Error('Token manquant dans la réponse API')
+      }
+
+      // ✅ Stockage correct
+      localStorage.setItem('traity_token', response.token)
+      authStore.setAuth(response.token, response.utilisateur)
+
+      // ✅ Redirection
       await router.push('/dashboard')
+
     } catch (e: unknown) {
-      errorMsg.value = e instanceof Error ? e.message : 'Email ou mot de passe incorrect'
+      errorMsg.value =
+        e instanceof Error ? e.message : 'Email ou mot de passe incorrect'
     } finally {
       loading.value = false
     }
@@ -30,11 +42,13 @@ export function useAuth() {
     loading.value = true
     errorMsg.value = null
     successMsg.value = null
+
     try {
       const res = await authApi.forgotPassword(payload)
       successMsg.value = res.message
     } catch (e: unknown) {
-      errorMsg.value = e instanceof Error ? e.message : 'Erreur lors de l\'envoi'
+      errorMsg.value =
+        e instanceof Error ? e.message : "Erreur lors de l'envoi"
     } finally {
       loading.value = false
     }
@@ -48,5 +62,12 @@ export function useAuth() {
     router.push('/login')
   }
 
-  return { login, forgotPassword, logout, loading, errorMsg, successMsg }
+  return {
+    login,
+    forgotPassword,
+    logout,
+    loading,
+    errorMsg,
+    successMsg,
+  }
 }

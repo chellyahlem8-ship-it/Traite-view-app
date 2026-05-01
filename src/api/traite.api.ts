@@ -3,7 +3,7 @@ import type { SaveTraitePayload, Tier, CompteBancaire, StatutTraite } from '@/ty
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 function getAuthToken(): string | null {
-  return localStorage.getItem('auth_token');
+  return localStorage.getItem('traity_token');
 }
 
 function authHeaders(): Record<string, string> {

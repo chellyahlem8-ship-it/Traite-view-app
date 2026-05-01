@@ -1,48 +1,23 @@
 <template>
-  <!-- ══════════════════════════════════════════════
-       SignUpView.vue
-       Page principale d'inscription — deux étapes :
-         1. Informations personnelles (SignupForm)
-         2. Choix du pack (SubscriptionCards)
-       + Modal de paiement (PaymentModal)
-       ══════════════════════════════════════════════ -->
   <div class="auth-root">
     <div class="signup-card" :class="{ 'card-expanded': step === 'packs' }">
 
-      <!-- ═══ PANNEAU VIOLET (identique au login) ═══ -->
+      <!-- ═══ PANNEAU VIOLET ═══ -->
       <div class="color-panel">
         <div class="panel-content">
-          <!-- Logo -->
           <div class="panel-logo">
             <TraityLogo :size="36" show-text />
           </div>
 
-          <!-- Stat flottante haut -->
-          <div class="stat-float stat-top">
-            <span class="stat-icon">📄</span>
-            <div>
-              <p class="stat-value">1,284</p>
-              <p class="stat-label">Traites actives</p>
-            </div>
-            <span class="stat-badge">+18%</span>
-          </div>
-
-          <!-- Illustration -->
+          <!-- Image selon l'étape -->
           <div class="avatar-wrap">
-            <img src="@/assets/t.png" alt="signup" class="avatar-img" />
+            <img
+              :src="step === 'form' ? t2img : t3img"
+              alt="signup"
+              class="avatar-img"
+            />
           </div>
 
-          <!-- Stat flottante bas -->
-          <div class="stat-float stat-bottom">
-            <span class="stat-icon">💰</span>
-            <div>
-              <p class="stat-value">842.5k DT</p>
-              <p class="stat-label">Trésorerie totale</p>
-            </div>
-            <span class="stat-badge">+62%</span>
-          </div>
-
-          <!-- Indicateur d'étape -->
           <div class="step-indicator">
             <div
               class="step-dot"
@@ -62,9 +37,8 @@
       <!-- ═══ PANNEAU FORMULAIRE ═══ -->
       <div class="form-panel">
         <div class="form-scroll">
-
-          <!-- ── ÉTAPE 1 : Formulaire d'inscription ── -->
           <Transition name="form-fade" mode="out-in">
+
             <div v-if="step === 'form'" key="form" class="form-inner">
               <SignupForm
                 :loading="registerLoading"
@@ -73,15 +47,13 @@
               />
             </div>
 
-            <!-- ── ÉTAPE 2 : Choix du pack ── -->
+            <!-- ── ÉTAPE 2 : Abonnement ── -->
             <div v-else-if="step === 'packs'" key="packs" class="form-inner packs-inner">
 
-              <!-- Bouton retour -->
               <button class="back-btn" @click="step = 'form'">
                 ← Modifier mes informations
               </button>
 
-              <!-- Récap utilisateur -->
               <div class="user-recap">
                 <span class="user-avatar-mini">
                   {{ userData.prenom[0] }}{{ userData.nom[0] }}
@@ -92,170 +64,165 @@
                 </div>
               </div>
 
-              <!-- Cartes packs -->
-              <SubscriptionCards
-                :packs="packs"
-                :selected-pack-id="selectedPackId"
-                :loading="packsLoading"
-                :error="packsError"
-                @select="handlePackSelect"
-              />
+              <!-- Titre -->
+              <div class="pack-section-title">
+                <h2>Votre abonnement Traity</h2>
+                <p>Accès complet à toutes les fonctionnalités</p>
+              </div>
+
+              <!-- Tabs période -->
+              <div class="period-tabs">
+                <button
+                  v-for="p in periods"
+                  :key="p.value"
+                  class="period-btn"
+                  :class="{ active: activePeriod === p.value }"
+                  @click="activePeriod = p.value"
+                >
+                  {{ p.label }}
+                  <span v-if="p.badge" class="period-badge">{{ p.badge }}</span>
+                </button>
+              </div>
+
+              <!-- Carte unique -->
+              <div
+                class="pack-card-single"
+                :class="{ selected: isSelected }"
+                @click="handlePackSelect()"
+              >
+                <div class="pack-card-left">
+                  <div class="pack-icon-big">🚀</div>
+                  <div>
+                    <h3 class="pack-name">Traity Pro</h3>
+                    <p class="pack-desc">Solution complète de gestion de traites et trésorerie</p>
+                  </div>
+                </div>
+
+                <div class="pack-price-block">
+                  <div class="pack-price">
+                    <span class="price-amount">{{ prixAffiche }}</span>
+                    <span class="price-currency"> DT</span>
+                    <span class="price-period">/{{ periodeLabel }}</span>
+                  </div>
+                  <p class="price-note">{{ priceNote }}</p>
+                </div>
+
+                <ul class="pack-features">
+                  <li v-for="f in features" :key="f.label">
+                    <span class="feature-icon">{{ f.icon }}</span>
+                    <span>{{ f.label }}</span>
+                  </li>
+                </ul>
+
+                <button class="btn-choose" :class="{ 'btn-choose-selected': isSelected }">
+                  <span v-if="isSelected">✓ Sélectionné</span>
+                  <span v-else>Choisir cet abonnement</span>
+                </button>
+              </div>
 
             </div>
           </Transition>
-
         </div>
       </div>
 
     </div>
 
-    <!-- ═══ MODAL DE PAIEMENT ═══ -->
-    <PaymentModal
+    <Paymentmodal
       v-model="showPaymentModal"
-      :pack="selectedPack"
+      :prix="prixAffiche"
+      :periode="periodeLabel"
       :user-email="userData.email"
       :on-confirm="handlePaymentConfirm"
       @confirmed="handlePaymentDone"
     />
-
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import TraityLogo from '@/components/TraityLogo.vue'
 import SignupForm from '@/components/SignupForm.vue'
-import SubscriptionCards from '@/components/SubscriptionCards.vue'
-import PaymentModal from '@/components/PaymentModal.vue'
+import PaymentModal from '@/components/Paymentmodal.vue'
 import { signupApi } from '@/api/signup.api'
-import type { Pack } from '@/types/signup.types'
+
+import t2img from '@/assets/t2.jpg'
+import t3img from '@/assets/t3.jpg'
 
 const router = useRouter()
 
-// ─── Navigation entre étapes ──────────────────────────────────
 type Step = 'form' | 'packs'
 const step = ref<Step>('form')
-
-// ─── Données utilisateur (partagées entre étapes) ─────────────
-const userData = reactive({
-  nom: '',
-  prenom: '',
-  email: '',
-  password: '',
-})
-
-// ─── Inscription ──────────────────────────────────────────────
+const userData = reactive({ nom: '', prenom: '', email: '', password: '' })
 const registerLoading = ref(false)
 const registerError = ref<string | null>(null)
 
-/**
- * Étape 1 : L'utilisateur soumet le formulaire.
- * On valide et on passe à l'étape 2 (choix du pack).
- */
 function handleFormSubmit(data: typeof userData) {
   Object.assign(userData, data)
   registerError.value = null
   step.value = 'packs'
 }
 
-// ─── Packs ────────────────────────────────────────────────────
-const packs = ref<Pack[]>([])
-const packsLoading = ref(false)
-const packsError = ref<string | null>(null)
-const selectedPackId = ref<number | null>(null)
+// ─── Périodes ─────────────────────────────────────────────────
+const periods = [
+  { value: 'mensuel',     label: 'Mensuel',     badge: null   },
+  { value: 'trimestriel', label: 'Trimestriel', badge: '-10%' },
+  { value: 'annuel',      label: 'Annuel',      badge: '-20%' },
+]
+const activePeriod = ref('mensuel')
+const PRIX_BASE = 49 // DT/mois
 
-const selectedPack = computed(() =>
-  packs.value.find(p => p.id === selectedPackId.value) ?? null
-)
-
-/**
- * Charge les packs depuis l'API au montage du composant.
- * En cas d'échec, utilise des données de démo.
- */
-onMounted(async () => {
-  packsLoading.value = true
-  try {
-    packs.value = await signupApi.getPacks()
-  } catch {
-    // Données de démo si l'API n'est pas disponible
-    packs.value = [
-      {
-        id: 1,
-        nom: 'Starter',
-        description: 'Idéal pour les indépendants et TPE',
-        prix: 29,
-        devise: 'DT',
-        features: [
-          'Jusqu\'à 50 traites/mois',
-          '1 utilisateur',
-          'Export PDF',
-          'Support e-mail',
-        ],
-      },
-      {
-        id: 2,
-        nom: 'Business',
-        description: 'Pour les PME en croissance',
-        prix: 79,
-        devise: 'DT',
-        popular: true,
-        features: [
-          'Traites illimitées',
-          '5 utilisateurs',
-          'Rapports avancés',
-          'Intégration bancaire',
-          'Support prioritaire',
-        ],
-      },
-      {
-        id: 3,
-        nom: 'Pro',
-        description: 'Pour les grandes entreprises',
-        prix: 149,
-        devise: 'DT',
-        features: [
-          'Tout Business inclus',
-          'Utilisateurs illimités',
-          'API complète',
-          'Manager dédié',
-          'SLA garanti',
-        ],
-      },
-    ]
-  } finally {
-    packsLoading.value = false
-  }
+const prixAffiche = computed(() => {
+  if (activePeriod.value === 'trimestriel') return Math.round(PRIX_BASE * 3 * 0.9)
+  if (activePeriod.value === 'annuel')      return Math.round(PRIX_BASE * 12 * 0.8)
+  return PRIX_BASE
 })
 
-// ─── Sélection d'un pack → ouverture modal ────────────────────
+const periodeLabel = computed(() => {
+  if (activePeriod.value === 'trimestriel') return 'trim.'
+  if (activePeriod.value === 'annuel')      return 'an'
+  return 'mois'
+})
+
+const priceNote = computed(() => {
+  if (activePeriod.value === 'trimestriel') return `Soit ${PRIX_BASE * 0.9} DT/mois — économisez 10%`
+  if (activePeriod.value === 'annuel')      return `Soit ${Math.round(PRIX_BASE * 0.8)} DT/mois — économisez 20%`
+  return 'Sans engagement'
+})
+
+// ─── Features de l'app ────────────────────────────────────────
+const features = [
+  { icon: '📄', label: 'Gestion complète des traites (émission, suivi, encaissement)' },
+  { icon: '🏦', label: 'Gestion des comptes bancaires et RIB' },
+  { icon: '👥', label: 'Gestion des tiers (clients & fournisseurs)' },
+  { icon: '🔔', label: 'Notifications automatiques d\'échéance (J-7, J-3, J-0)' },
+  { icon: '📊', label: 'Tableau de bord trésorerie en temps réel' },
+  { icon: '📤', label: 'Export PDF et rapports financiers' },
+  { icon: '🔒', label: 'Accès sécurisé multi-utilisateurs' },
+  { icon: '⚡', label: 'Support prioritaire inclus' },
+]
+
+// ─── Sélection ────────────────────────────────────────────────
+const isSelected = ref(false)
 const showPaymentModal = ref(false)
 
-function handlePackSelect(pack: Pack) {
-  selectedPackId.value = pack.id
+function handlePackSelect() {
+  isSelected.value = true
   showPaymentModal.value = true
 }
 
-// ─── Confirmation du paiement (callback pour PaymentModal) ────
 async function handlePaymentConfirm(method: 'online' | 'virement') {
-  if (!selectedPack.value) return
-
-  // Appel API pour créer la demande en BDD (statut: en_attente)
   await signupApi.register({
     nom: userData.nom,
     prenom: userData.prenom,
     email: userData.email,
     motDePasse: userData.password,
     confirmMotDePasse: userData.password,
-    idPack: selectedPack.value.id,
+    idPack: 1,
     methodePaiement: method,
   })
 }
 
-/**
- * Après confirmation, la modal affiche le message d'attente.
- * Quand l'utilisateur clique "Retour à la connexion", on redirige.
- */
 function handlePaymentDone() {
   router.push('/login')
 }
@@ -266,7 +233,6 @@ function handlePaymentDone() {
 
 * { box-sizing: border-box; }
 
-// ── Root ──────────────────────────────────────────────────────
 .auth-root {
   min-height: 100vh;
   display: flex;
@@ -277,25 +243,19 @@ function handlePaymentDone() {
   padding: 24px 16px;
 }
 
-// ── Card principale ───────────────────────────────────────────
 .signup-card {
   width: 900px;
   max-width: 100%;
   border-radius: 24px;
   overflow: hidden;
-  position: relative;
   box-shadow: 0 24px 60px rgba(109, 40, 217, 0.2);
   background: #f5f3ff;
   display: flex;
   min-height: 560px;
   transition: min-height 0.4s ease;
-
-  &.card-expanded {
-    min-height: 680px;
-  }
+  &.card-expanded { min-height: 680px; }
 }
 
-// ── Panneau violet (réutilisé du login) ───────────────────────
 .color-panel {
   width: 50%;
   flex-shrink: 0;
@@ -303,28 +263,6 @@ function handlePaymentDone() {
   border-radius: 20px;
   position: relative;
   overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    width: 320px; height: 320px;
-    border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.15);
-    top: 50%; left: 50%;
-    transform: translate(-50%, -60%);
-    pointer-events: none;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    width: 210px; height: 210px;
-    border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.1);
-    bottom: 50px; left: 50%;
-    transform: translateX(-50%);
-    pointer-events: none;
-  }
 }
 
 .panel-content {
@@ -349,50 +287,14 @@ function handlePaymentDone() {
   height: auto;
   display: block;
   filter: drop-shadow(0 10px 28px rgba(80, 0, 120, 0.3));
+  transition: opacity 0.3s ease;
 }
 
-// ── Stats flottantes ──────────────────────────────────────────
-.stat-float {
-  position: absolute;
-  display: flex; align-items: center; gap: 10px;
-  background: rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.35);
-  backdrop-filter: blur(10px);
-  border-radius: 14px;
-  padding: 10px 16px;
-  color: #fff;
-  min-width: 175px;
-  z-index: 5;
-  box-shadow: 0 8px 24px rgba(60,0,100,0.2);
-
-  .stat-icon  { font-size: 18px; }
-  .stat-value { font-size: 13px; font-weight: 600; margin: 0; }
-  .stat-label { font-size: 10px; opacity: 0.8; margin: 0; }
-  .stat-badge {
-    margin-left: auto;
-    font-size: 10px; font-weight: 600;
-    color: #d1fae5;
-    background: rgba(52,211,153,0.2);
-    border-radius: 6px;
-    padding: 2px 7px;
-  }
-}
-
-.stat-top    { top: 20%; right: 5%;  animation: floatUp   4s   ease-in-out infinite; }
-.stat-bottom { bottom: 14%; left: 3%; animation: floatDown 4.5s ease-in-out infinite; }
-
-@keyframes floatUp   { 0%,100% { transform: translateY(0);   } 50% { transform: translateY(-12px); } }
-@keyframes floatDown { 0%,100% { transform: translateY(0);   } 50% { transform: translateY(12px);  } }
-
-// ── Indicateur d'étape ────────────────────────────────────────
 .step-indicator {
   position: absolute;
-  bottom: 24px;
-  left: 50%;
+  bottom: 24px; left: 50%;
   transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: flex; align-items: center; gap: 6px;
   z-index: 6;
 }
 
@@ -401,41 +303,24 @@ function handlePaymentDone() {
   border-radius: 50%;
   border: 2px solid rgba(255,255,255,0.4);
   background: rgba(255,255,255,0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   color: rgba(255,255,255,0.6);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 12px; font-weight: 600;
   transition: all 0.3s;
 
-  &.active {
-    background: #fff;
-    border-color: #fff;
-    color: #7c3aed;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  }
-
-  &.done {
-    background: rgba(255,255,255,0.4);
-    border-color: #fff;
-    color: #fff;
-    cursor: pointer;
-    &:hover { background: rgba(255,255,255,0.55); }
-  }
+  &.active { background: #fff; border-color: #fff; color: #7c3aed; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  &.done   { background: rgba(255,255,255,0.4); border-color: #fff; color: #fff; cursor: pointer;
+              &:hover { background: rgba(255,255,255,0.55); } }
 }
 
 .step-line {
-  width: 28px;
-  height: 2px;
+  width: 28px; height: 2px;
   background: rgba(255,255,255,0.3);
   border-radius: 2px;
   transition: background 0.3s;
-
   &.active { background: rgba(255,255,255,0.8); }
 }
 
-// ── Panneau formulaire ────────────────────────────────────────
 .form-panel {
   flex: 1;
   display: flex;
@@ -447,12 +332,10 @@ function handlePaymentDone() {
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #ddd6fe transparent;
-
   &::-webkit-scrollbar { width: 4px; }
   &::-webkit-scrollbar-thumb { background: #ddd6fe; border-radius: 4px; }
 }
 
-// ── Contenu interne ───────────────────────────────────────────
 .form-inner {
   padding: 44px 44px 36px;
   display: flex;
@@ -466,100 +349,166 @@ function handlePaymentDone() {
   align-items: stretch;
 }
 
-// ── Bouton retour ─────────────────────────────────────────────
 .back-btn {
-  background: none;
-  border: none;
-  color: #8b5cf6;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  font-family: 'Outfit', sans-serif;
-  padding: 0 0 16px;
-  text-align: left;
+  background: none; border: none;
+  color: #8b5cf6; font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: 'Outfit', sans-serif;
+  padding: 0 0 16px; text-align: left;
   transition: color 0.2s;
-
   &:hover { color: #6d28d9; text-decoration: underline; }
 }
 
-// ── Récap utilisateur ─────────────────────────────────────────
 .user-recap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #faf5ff;
-  border: 1.5px solid #ddd6fe;
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 12px;
+  background: #faf5ff; border: 1.5px solid #ddd6fe;
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;
 }
 
 .user-avatar-mini {
   width: 40px; height: 40px;
   border-radius: 50%;
   background: linear-gradient(135deg, #6d28d9, #8b5cf6);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
+  color: #fff; font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  text-transform: uppercase; flex-shrink: 0;
+}
+
+.user-recap-name  { font-size: 14px; font-weight: 600; color: #4c1d95; margin: 0; }
+.user-recap-email { font-size: 12px; color: #8b5cf6; margin: 2px 0 0; }
+
+.pack-section-title {
+  margin-bottom: 16px;
+  h2 { font-size: 17px; font-weight: 700; color: #4c1d95; margin: 0 0 4px; }
+  p  { font-size: 12px; color: #8b5cf6; margin: 0; }
+}
+
+.period-tabs {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  text-transform: uppercase;
-  flex-shrink: 0;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: #f0ebff;
+  border-radius: 12px;
+  padding: 5px;
 }
 
-.user-recap-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #4c1d95;
-  margin: 0;
+.period-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  background: transparent;
+  color: #7c3aed;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+
+  &:hover { background: rgba(139,92,246,0.1); }
+  &.active {
+    background: #6d28d9;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(109,40,217,0.3);
+  }
 }
 
-.user-recap-email {
-  font-size: 12px;
-  color: #8b5cf6;
-  margin: 2px 0 0;
+.period-badge {
+  font-size: 10px; font-weight: 600;
+  background: #d1fae5; color: #065f46;
+  border-radius: 6px; padding: 1px 6px;
+  .active & { background: rgba(255,255,255,0.25); color: #fff; }
 }
 
-// ── Transitions ───────────────────────────────────────────────
+// ── Carte abonnement unique ────────────────────────────────────
+.pack-card-single {
+  background: #faf5ff;
+  border: 2px solid #ddd6fe;
+  border-radius: 18px;
+  padding: 24px 20px 20px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex; flex-direction: column; gap: 16px;
+
+  &:hover { border-color: #8b5cf6; box-shadow: 0 12px 32px rgba(109,40,217,0.15); }
+  &.selected {
+    border-color: #6d28d9;
+    background: linear-gradient(145deg, #f5f3ff, #ede9fe);
+    box-shadow: 0 0 0 3px rgba(109,40,217,0.15), 0 8px 28px rgba(109,40,217,0.18);
+  }
+}
+
+.pack-card-left {
+  display: flex; align-items: center; gap: 14px;
+}
+
+.pack-icon-big {
+  font-size: 32px; width: 52px; height: 52px;
+  background: rgba(139,92,246,0.12); border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+.pack-name { font-size: 18px; font-weight: 700; color: #4c1d95; margin: 0; }
+.pack-desc { font-size: 12px; color: #8b5cf6; margin: 4px 0 0; line-height: 1.4; }
+
+.pack-price-block {
+  background: rgba(109,40,217,0.06);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.pack-price {
+  display: flex; align-items: baseline; gap: 2px;
+}
+.price-amount   { font-size: 32px; font-weight: 700; color: #6d28d9; }
+.price-currency { font-size: 14px; font-weight: 600; color: #7c3aed; }
+.price-period   { font-size: 13px; color: #a78bfa; margin-left: 4px; }
+.price-note     { font-size: 12px; color: #8b5cf6; margin: 0; font-style: italic; }
+
+.pack-features {
+  list-style: none; padding: 0; margin: 0;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+
+  li {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 12px; color: #5b21b6; line-height: 1.4;
+  }
+}
+
+.feature-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+.btn-choose {
+  width: 100%; padding: 12px;
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+  color: #fff; border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  font-family: 'Outfit', sans-serif; transition: all 0.2s;
+
+  &:hover { opacity: 0.9; transform: translateY(-1px); }
+  &.btn-choose-selected {
+    background: linear-gradient(135deg, #6d28d9, #7c3aed);
+    box-shadow: 0 4px 14px rgba(109,40,217,0.3);
+  }
+}
+
 .form-fade-enter-active { transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s; }
 .form-fade-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
 .form-fade-enter-from  { opacity: 0; transform: translateX(20px); }
 .form-fade-leave-to    { opacity: 0; transform: translateX(-20px); }
 
-// ── Responsive ────────────────────────────────────────────────
 @media (max-width: 768px) {
-  .signup-card {
-    flex-direction: column;
-    min-height: auto;
-  }
-
-  .color-panel {
-    width: 100%;
-    height: 200px;
-    border-radius: 20px 20px 0 0;
-    flex-shrink: 0;
-  }
-
+  .signup-card { flex-direction: column; min-height: auto; }
+  .color-panel { width: 100%; height: 200px; border-radius: 20px 20px 0 0; flex-shrink: 0; }
   .panel-content { flex-direction: row; justify-content: space-around; padding: 20px; }
   .avatar-img { width: 100px; }
-  .stat-float { display: none; }
-
-  .step-indicator {
-    position: static;
-    transform: none;
-    margin-top: 12px;
-  }
-
+  .step-indicator { position: static; transform: none; margin-top: 12px; }
   .panel-logo { top: 16px; left: 16px; }
-
-  .form-inner {
-    padding: 28px 24px;
-  }
-
-  .packs-inner {
-    padding-top: 20px;
-  }
+  .form-inner { padding: 28px 24px; }
+  .packs-inner { padding-top: 20px; }
+  .period-tabs { flex-direction: column; }
+  .pack-features { grid-template-columns: 1fr; }
+  .pack-price-block { flex-direction: column; align-items: flex-start; gap: 4px; }
 }
 
 @media (max-width: 480px) {

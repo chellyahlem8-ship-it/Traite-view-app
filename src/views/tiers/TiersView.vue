@@ -10,25 +10,32 @@
 
       <!-- ── Statistiques rapides ─────── -->
       <div class="stats-bar">
-        <div class="stat-card">
+        <div class="stat-card stat-card--total">
           <span class="stat-icon">👥</span>
           <div>
             <div class="stat-value">{{ tiers.length }}</div>
             <div class="stat-label">Total tiers</div>
           </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card stat-card--client">
           <span class="stat-icon">✅</span>
           <div>
-            <div class="stat-value">{{ tiersClients }}</div>
+            <div class="stat-value">{{ tiersClientsOnly }}</div>
             <div class="stat-label">Clients</div>
           </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card stat-card--fournisseur">
           <span class="stat-icon">📦</span>
           <div>
-            <div class="stat-value">{{ tiersFournisseurs }}</div>
+            <div class="stat-value">{{ tiersFournisseursOnly }}</div>
             <div class="stat-label">Fournisseurs</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card--both">
+          <span class="stat-icon">🔄</span>
+          <div>
+            <div class="stat-value">{{ tiersBoth }}</div>
+            <div class="stat-label">Client &amp; Fournisseur</div>
           </div>
         </div>
       </div>
@@ -70,10 +77,11 @@
               <tr>
                 <th></th>
                 <th>NOM DU TIERS</th>
+                <th>TYPE</th>
                 <th>COMPTES BANCAIRES</th>
                 <th>ADRESSE</th>
                 <th>TÉLÉPHONE</th>
-                <th></th>
+                <th>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
@@ -91,10 +99,16 @@
                 <!-- Nom -->
                 <td class="td-name">
                   <span class="tier-name">{{ tier.raison_sociale }}</span>
-                  <span class="tier-type">{{ tier.type_tiers?.type ?? '' }}</span>
                 </td>
 
-                <!-- ✅ TOUS les comptes bancaires du tiers -->
+                <!-- Type badge -->
+                <td class="td-type">
+                  <span :class="['type-badge', typeBadgeClass(tier.type_tiers?.type)]">
+                    {{ tier.type_tiers?.type ?? '—' }}
+                  </span>
+                </td>
+
+                <!-- Comptes bancaires du tiers -->
                 <td class="td-bank">
                   <template v-if="tier.comptes_bancaires && tier.comptes_bancaires.length > 0">
                     <div
@@ -116,8 +130,11 @@
                 <!-- Téléphone -->
                 <td class="td-tel">{{ tier.num_tel }}</td>
 
-                <!-- Action Edit -->
+                <!-- Actions -->
                 <td class="td-action">
+                  <button class="link-btn link-btn--bank" @click.stop="goAddCompteBancaire(tier.id)" title="Ajouter compte bancaire à ce tiers">
+                    🏦 Ajouter compte bancaire
+                  </button>
                   <button class="link-btn" @click.stop="editTier(tier.id)">Modifier</button>
                 </td>
               </tr>
@@ -150,12 +167,33 @@ const toastType      = ref<'success' | 'error'>('success')
 const selectedTierId = ref<number | null>(null)
 
 // ── Stats rapides ────────────────────────────────────────────
-const tiersClients      = computed(() => tiers.value.filter(t => t.type_tiers?.type?.toLowerCase() === 'client').length)
-const tiersFournisseurs = computed(() => tiers.value.filter(t => t.type_tiers?.type?.toLowerCase() === 'fournisseur').length)
+// Tiers uniquement "client" (pas fournisseur en même temps)
+const tiersClientsOnly = computed(() =>
+  tiers.value.filter(t => t.type_tiers?.type?.toLowerCase() === 'client').length
+)
+// Tiers uniquement "fournisseur"
+const tiersFournisseursOnly = computed(() =>
+  tiers.value.filter(t => t.type_tiers?.type?.toLowerCase() === 'fournisseur').length
+)
+// Tiers qui sont les deux à la fois
+const tiersBoth = computed(() =>
+  tiers.value.filter(t => {
+    const type = t.type_tiers?.type?.toLowerCase() ?? ''
+    return type === 'client et fournisseur' || type === 'clientetfournisseur' || type.includes('client') && type.includes('fournisseur')
+  }).length
+)
 
 // ── Helpers ──────────────────────────────────────────────────
 function initiales(nom: string): string {
   return nom.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+function typeBadgeClass(type?: string): string {
+  const t = type?.toLowerCase() ?? ''
+  if (t === 'client') return 'type-badge--client'
+  if (t === 'fournisseur') return 'type-badge--fournisseur'
+  if (t.includes('client') && t.includes('fournisseur')) return 'type-badge--both'
+  return 'type-badge--default'
 }
 
 // ── Chargement ───────────────────────────────────────────────
@@ -186,6 +224,9 @@ function selectTier(id: number) {
 function goCreate() { router.push({ name: 'CreateTier' }) }
 function goEdit()   { if (selectedTierId.value) router.push({ name: 'EditTier', params: { id: selectedTierId.value } }) }
 function editTier(id: number) { router.push({ name: 'EditTier', params: { id } }) }
+function goAddCompteBancaire(tierId: number) {
+  router.push({ name: 'CreateCompteBancaireForTier', params: { tierId } })
+}
 
 onMounted(fetchAll)
 </script>
@@ -238,7 +279,6 @@ onMounted(fetchAll)
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #7c3aed, #6d28d9);
   color: #fff;
   border-radius: 14px;
   padding: 16px 24px;
@@ -246,7 +286,12 @@ onMounted(fetchAll)
   align-items: center;
   gap: 14px;
   min-width: 160px;
-  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.25);
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.2);
+
+  &--total      { background: linear-gradient(135deg, #7c3aed, #6d28d9); box-shadow: 0 4px 12px rgba(109,40,217,0.25); }
+  &--client     { background: linear-gradient(135deg, #059669, #047857); box-shadow: 0 4px 12px rgba(5,150,105,0.25); }
+  &--fournisseur{ background: linear-gradient(135deg, #d97706, #b45309); box-shadow: 0 4px 12px rgba(217,119,6,0.25); }
+  &--both       { background: linear-gradient(135deg, #0284c7, #0369a1); box-shadow: 0 4px 12px rgba(2,132,199,0.25); }
 }
 
 .stat-icon  { font-size: 24px; }
@@ -409,12 +454,28 @@ onMounted(fetchAll)
 }
 
 .td-name {
-  display: table-cell;
   .tier-name { display: block; font-weight: 600; color: #1e1b4b; }
-  .tier-type { display: block; font-size: 12px; color: #9ca3af; margin-top: 2px; }
 }
 
-/* ── Comptes bancaires — tous les comptes empilés ─────────────── */
+/* ── Type badge ─────────────────────────────────────────────── */
+.td-type { white-space: nowrap; }
+
+.type-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: capitalize;
+  letter-spacing: 0.03em;
+
+  &--client      { background: #d1fae5; color: #065f46; }
+  &--fournisseur { background: #fef3c7; color: #92400e; }
+  &--both        { background: #dbeafe; color: #1e40af; }
+  &--default     { background: #f3f4f6; color: #374151; }
+}
+
+/* ── Comptes bancaires ─────────────────────────────────────── */
 .td-bank {
   vertical-align: middle;
   min-width: 180px;
@@ -428,16 +489,13 @@ onMounted(fetchAll)
   border-radius: 7px;
   transition: background 0.12s;
 
-  /* Séparateur visuel entre deux comptes */
   &--separator {
     margin-top: 6px;
     padding-top: 8px;
     border-top: 1px dashed #e9e5f5;
   }
 
-  &:hover {
-    background: #f5f3ff;
-  }
+  &:hover { background: #f5f3ff; }
 }
 
 .bank-name {
@@ -458,15 +516,31 @@ onMounted(fetchAll)
 
 .no-data { color: #d1d5db; }
 
+/* ── Actions ─────────────────────────────────────────────────── */
+.td-action {
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
 .link-btn {
   background: none;
   border: none;
   color: #7c3aed;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   padding: 0;
   &:hover { text-decoration: underline; }
+
+  &--bank {
+    color: #059669;
+    font-size: 12px;
+    font-weight: 500;
+    &:hover { color: #047857; }
+  }
 }
 
 /* ── État vide ───────────────────────────────────────────────── */
