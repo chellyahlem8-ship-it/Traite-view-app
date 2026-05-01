@@ -34,14 +34,6 @@
         <span class="nav-icon">📄</span> Traites
       </router-link>
 
-      <router-link
-        :to="{ name: 'CreateStatutTraite' }"
-        class="nav-item"
-        active-class="active"
-        @click="closeSidebar"
-      >
-        <span class="nav-icon">📋</span> Statuts de traite
-      </router-link>
 
       <router-link
         :to="{ name: 'Tiers' }"
@@ -78,6 +70,14 @@
       >
         <span class="nav-icon">💳</span> Comptes bancaires
       </router-link>
+      <router-link
+        :to="{ name: 'Abonnements' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
+        <span class="nav-icon">💳</span> Abonnements
+      </router-link>
 
       <button class="nav-item" disabled>
         <span class="nav-icon">💰</span> Trésorerie
@@ -86,6 +86,7 @@
       <button class="nav-item" disabled>
         <span class="nav-icon">⚙️</span> Paramètres
       </button>
+      
     </nav>
 
     <button class="logout-btn" @click="handleLogout">

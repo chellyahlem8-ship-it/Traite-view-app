@@ -3,7 +3,7 @@ import type { SaveTraitePayload, Tier, CompteBancaire, StatutTraite } from '@/ty
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 function getAuthToken(): string | null {
-  return localStorage.getItem('auth_token');
+  return localStorage.getItem('traity_token');
 }
 
 function authHeaders(): Record<string, string> {
@@ -22,12 +22,35 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
-/** Enregistre une seule traite (le backend attend une traite à la fois) */
+/** Enregistre une seule traite */
 export async function saveTraite(payload: SaveTraitePayload): Promise<any> {
   const response = await fetch(`${API_BASE_URL}/traites`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload)
+  });
+  return handleResponse(response);
+}
+
+/** Récupère la liste des traites avec leurs relations */
+export async function fetchTraites(params?: {
+  statuts_traites_id?: number
+  type_traite?: string
+  comptes_bancaires_id?: number
+  montant_min?: number
+  montant_max?: number
+  date_echeance_debut?: string
+  date_echeance_fin?: string
+}): Promise<{ success: boolean; data: any[] }> {
+  const url = new URL(`${API_BASE_URL}/traites`);
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== '') url.searchParams.append(k, String(v));
+    });
+  }
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: authHeaders()
   });
   return handleResponse(response);
 }
@@ -41,7 +64,7 @@ export async function fetchTiers(): Promise<{ success: boolean; data: Tier[] }> 
   return handleResponse(response);
 }
 
-/** Récupère les comptes bancaires (optionnellement filtrés par titulaire) */
+/** Récupère les comptes bancaires */
 export async function fetchComptesBancaires(tierId?: number): Promise<{ success: boolean; data: CompteBancaire[] }> {
   const url = tierId
     ? `${API_BASE_URL}/comptes-bancaires?titulaire_id=${tierId}`
@@ -53,19 +76,38 @@ export async function fetchComptesBancaires(tierId?: number): Promise<{ success:
   return handleResponse(response);
 }
 
-/** Récupère les statuts de traite */
+/** Récupère les statuts de traite — route: GET /api/statuts-traites */
 export async function fetchStatuts(): Promise<{ success: boolean; data: StatutTraite[] }> {
-  const response = await fetch(`${API_BASE_URL}/statuts`, {
+  const response = await fetch(`${API_BASE_URL}/statuts-traites`, {
     method: 'GET',
     headers: authHeaders()
   });
   return handleResponse(response);
 }
 
-/** Récupère la liste des traites */
-export async function fetchTraites(): Promise<{ success: boolean; data: any[] }> {
-  const response = await fetch(`${API_BASE_URL}/traites`, {
-    method: 'GET',
+/** Crée un nouveau statut de traite — route: POST /api/statuts-traites */
+export async function createStatut(statut: string): Promise<{ success: boolean; data: StatutTraite }> {
+  const response = await fetch(`${API_BASE_URL}/statuts-traites`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ statut })
+  });
+  return handleResponse(response);
+}
+
+/** Annule une traite — route: PATCH /api/traites/{id}/status */
+export async function cancelTraite(id: number): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE_URL}/traites/${id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders()
+  });
+  return handleResponse(response);
+}
+
+/** Supprime une traite — route: DELETE /api/traites/{id} */
+export async function deleteTraite(id: number): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE_URL}/traites/${id}`, {
+    method: 'DELETE',
     headers: authHeaders()
   });
   return handleResponse(response);

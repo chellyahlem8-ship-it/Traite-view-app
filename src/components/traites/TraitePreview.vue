@@ -205,6 +205,7 @@ const D = computed(() => {
     lieu:           f.lieu,
     // On ne stocke plus "beneficiaire" séparément — c'est toujours le tireur
     tireurNom:      f.tireurNom,
+    tireNom:        f.tireNom,
     banqueNom:      f.banqueNom,
     rib:            f.rib,
   };
@@ -227,7 +228,7 @@ const D = computed(() => {
  *   • Case "Nom et adresse du Tiré"       → nomTire
  * ─────────────────────────────────────────────────────────
  */
-const nomTireur = computed<string>(() => {
+/*const nomTireur = computed<string>(() => {
   // CLIENT  → Tireur = ma société (tireurNom dans le store)
   // FOURN.  → Tireur = le fournisseur sélectionné (bénéficiaire = tiers)
   if (D.value.typeTraite === 'client') return D.value.tireurNom ?? '';
@@ -240,6 +241,15 @@ const nomTire = computed<string>(() => {
   // FOURN.  → Tiré = ma société
   if (D.value.typeTraite === 'client') return (D.value as any).beneficiaire ?? '';
   return D.value.tireurNom ?? '';
+});*/
+// TraitePreview.vue <script setup>
+
+const nomTireur = computed<string>(() => {
+  return D.value.tireurNom ?? '';
+});
+
+const nomTire = computed<string>(() => {
+  return D.value.tireNom ?? '';   // ✅ tireNom existe dans TraiteItem
 });
 
 const hasAnyData = computed(() =>

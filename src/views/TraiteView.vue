@@ -8,10 +8,10 @@
       <div class="page-header">
         <h1 class="page-title">Traites</h1>
         <div class="header-actions">
-          <button class="btn btn--secondary-outline" @click="showAddStatut = true">
+          <button class="btn btn--secondary-outline" @click="openAddStatut">
             <span>＋</span> Ajouter Statut Traite
           </button>
-          <button class="btn btn--primary" @click="showAddTraite = true">
+          <button class="btn btn--primary" @click="goToCreate">
             <span>＋</span> Ajouter Traite
           </button>
         </div>
@@ -22,7 +22,7 @@
         <div class="stat-card stat-card--total">
           <span class="stat-icon">📄</span>
           <div>
-            <div class="stat-value">{{ totalTraites }}</div>
+            <div class="stat-value">{{ traites.length }}</div>
             <div class="stat-label">Total traites</div>
           </div>
         </div>
@@ -33,25 +33,15 @@
             <div class="stat-label">Montant total</div>
           </div>
         </div>
-        <div class="stat-card stat-card--payé">
-          <span class="stat-icon">✅</span>
+        <div
+          v-for="st in statuts"
+          :key="st.id"
+          class="stat-card stat-card--dynamic"
+        >
+          <span class="stat-icon">🏷</span>
           <div>
-            <div class="stat-value">{{ countByEtat('payé') }}</div>
-            <div class="stat-label">Payées</div>
-          </div>
-        </div>
-        <div class="stat-card stat-card--nonpayé">
-          <span class="stat-icon">❌</span>
-          <div>
-            <div class="stat-value">{{ countByEtat('non_payé') }}</div>
-            <div class="stat-label">Non payées</div>
-          </div>
-        </div>
-        <div class="stat-card stat-card--caisse">
-          <span class="stat-icon">🏦</span>
-          <div>
-            <div class="stat-value">{{ countByEtat('en_caisse') }}</div>
-            <div class="stat-label">En caisse</div>
+            <div class="stat-value">{{ countByStatut(st.id) }}</div>
+            <div class="stat-label">{{ st.statut }}</div>
           </div>
         </div>
       </div>
@@ -61,6 +51,28 @@
         <div v-if="toastMsg" :class="['toast', toastType === 'success' ? 'toast--success' : 'toast--error']">
           <span>{{ toastMsg }}</span>
           <button class="toast-close" @click="toastMsg = null">✕</button>
+        </div>
+      </Transition>
+
+      <!-- ── Modal Ajouter Statut Traite ──────────────────────── -->
+      <Transition name="fade">
+        <div v-if="showStatutModal" class="modal-overlay" @click.self="showStatutModal = false">
+          <div class="modal-box">
+            <h3 class="modal-title">Ajouter un statut de traite</h3>
+            <input
+              v-model="newStatut"
+              class="modal-input"
+              type="text"
+              placeholder="Ex: En attente, Remis en banque…"
+              @keyup.enter="saveStatut"
+            />
+            <div class="modal-actions">
+              <button class="btn btn--secondary-outline" @click="showStatutModal = false">Annuler</button>
+              <button class="btn btn--primary" :disabled="!newStatut.trim() || savingStatut" @click="saveStatut">
+                {{ savingStatut ? 'Enregistrement…' : 'Enregistrer' }}
+              </button>
+            </div>
+          </div>
         </div>
       </Transition>
 
@@ -75,17 +87,17 @@
               v-model="searchQuery"
               class="search-input"
               type="text"
-              placeholder="Rechercher une traite…"
+              placeholder="Rechercher par tiers, banque, montant…"
             />
           </div>
 
           <div class="filters">
-            <select v-model="filterEtat" class="filter-select">
+            <!-- Filtre statut : options chargées depuis l'API -->
+            <select v-model="filterStatutId" class="filter-select">
               <option value="">Tous les états</option>
-              <option value="payé">Payé</option>
-              <option value="non_payé">Non payé</option>
-              <option value="non_échue">Non échue</option>
-              <option value="en_caisse">En caisse</option>
+              <option v-for="st in statuts" :key="st.id" :value="st.id">
+                {{ st.statut }}
+              </option>
             </select>
 
             <select v-model="filterType" class="filter-select">
@@ -99,11 +111,11 @@
         <!-- Actions sélection -->
         <div class="action-bar" v-if="selectedIds.length > 0">
           <span class="selection-info">{{ selectedIds.length }} traite(s) sélectionnée(s)</span>
-          <button class="btn btn--danger-outline" @click="deleteSelected">
-            🗑 Supprimer
+          <button class="btn btn--danger-outline" @click="cancelSelected">
+            🚫 Annuler la sélection
           </button>
           <button class="btn btn--secondary-outline" @click="selectedIds = []">
-            Annuler
+            Désélectionner
           </button>
         </div>
 
@@ -119,12 +131,8 @@
             <thead>
               <tr>
                 <th class="th-check">
-                  <input
-                    type="checkbox"
-                    class="custom-checkbox"
-                    :checked="allPageSelected"
-                    @change="toggleSelectAll"
-                  />
+                  <input type="checkbox" class="custom-checkbox"
+                    :checked="allPageSelected" @change="toggleSelectAll" />
                 </th>
                 <th
                   v-for="col in columns"
@@ -147,32 +155,57 @@
                 @click="toggleSelect(traite.id)"
               >
                 <td class="td-check" @click.stop>
-                  <input
-                    type="checkbox"
-                    class="custom-checkbox"
+                  <input type="checkbox" class="custom-checkbox"
                     :checked="selectedIds.includes(traite.id)"
-                    @change="toggleSelect(traite.id)"
-                  />
+                    @change="toggleSelect(traite.id)" />
                 </td>
+
+                <!-- Montant -->
                 <td class="td-montant">
                   <span class="montant-value">{{ formatMontant(traite.montant) }}</span>
                 </td>
+
+                <!-- Date émission -->
                 <td class="td-date">{{ formatDate(traite.date_emission) }}</td>
+
+                <!-- Date échéance -->
                 <td class="td-date">
                   <span :class="['echeance-text', isOverdue(traite) ? 'echeance--overdue' : '']">
                     {{ formatDate(traite.date_echeance) }}
                     <span v-if="isOverdue(traite)" class="overdue-badge">En retard</span>
                   </span>
                 </td>
+
+                <!-- Banque -->
                 <td class="td-banque">
-                  <span class="banque-chip">🏦 {{ traite.banque }}</span>
+                  <span v-if="traite.compteBancaire?.banque" class="banque-chip">
+                    🏦 {{ traite.compteBancaire.banque.nomBanque }}
+                  </span>
+                  <span v-else class="no-data">—</span>
                 </td>
+
+                <!-- Tiers (tireur) -->
+                <td class="td-tiers">
+                  <span v-if="traite.tireur">{{ traite.tireur.raison_sociale }}</span>
+                  <span v-else class="no-data">—</span>
+                </td>
+
+                <!-- Statut -->
                 <td class="td-etat">
-                  <StatusBadge :value="traite.etat" />
+                  <StatusBadge
+                    v-if="traite.statutTraite"
+                    :value="traite.statutTraite.statut"
+                    kind="etat"
+                  />
+                  <span v-else class="no-data">—</span>
                 </td>
+
+                <!-- Type -->
                 <td class="td-type">
-                  <StatusBadge :value="traite.type" />
+                  <StatusBadge :value="traite.type_traite" kind="type" />
                 </td>
+
+                <!-- Action -->
                 <td class="td-action" @click.stop>
                   <button class="link-btn" @click="editTraite(traite)">Modifier</button>
                 </td>
@@ -195,23 +228,13 @@
             sur {{ filteredTraites.length }} traite(s)
           </span>
           <div class="pagination-controls">
+            <button class="page-btn" :disabled="currentPage === 1" @click="currentPage--">‹</button>
             <button
-              class="page-btn"
-              :disabled="currentPage === 1"
-              @click="currentPage--"
-            >‹</button>
-            <button
-              v-for="p in visiblePages"
-              :key="p"
-              class="page-btn"
-              :class="{ 'page-btn--active': p === currentPage }"
+              v-for="p in visiblePages" :key="p"
+              class="page-btn" :class="{ 'page-btn--active': p === currentPage }"
               @click="currentPage = p"
             >{{ p }}</button>
-            <button
-              class="page-btn"
-              :disabled="currentPage === totalPages"
-              @click="currentPage++"
-            >›</button>
+            <button class="page-btn" :disabled="currentPage === totalPages" @click="currentPage++">›</button>
           </div>
         </div>
 
@@ -222,85 +245,116 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
+import { fetchTraites, fetchStatuts } from '@/api/traite.api'
+import type { StatutTraite } from '@/types/traite.types'
 
-// ── Types ────────────────────────────────────────────────────
-type EtatType = 'payé' | 'non_payé' | 'non_échue' | 'en_caisse'
-type TypeTiers = 'client' | 'fournisseur'
+const router = useRouter()
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
 
-interface Traite {
+// ── Types locaux (réponse réelle du backend) ──────────────────
+interface TraiteAPI {
   id: number
   montant: number
+  type_traite: 'fournisseur' | 'client'
   date_emission: string
   date_echeance: string
-  banque: string
-  etat: EtatType
-  type: TypeTiers
-  tiers: string
+  comptes_bancaires_id: number
+  statuts_traites_id: number
+  tireur_id: number
+  tireur_type: string
+  compteBancaire?: {
+    id: number
+    rib: string
+    banque?: { id: number; nomBanque: string }
+  }
+  statutTraite?: { id: number; statut: string }
+  tireur?: { id: number; raison_sociale: string }
 }
 
-// ── Colonnes ─────────────────────────────────────────────────
+// ── Colonnes ──────────────────────────────────────────────────
 const columns = [
-  { key: 'montant',        label: 'MONTANT',        sortable: true  },
-  { key: 'date_emission',  label: "DATE D'ÉMISSION", sortable: true  },
-  { key: 'date_echeance',  label: "DATE D'ÉCHÉANCE", sortable: true  },
-  { key: 'banque',         label: 'BANQUE',          sortable: true  },
-  { key: 'etat',           label: 'ÉTAT',            sortable: false },
-  { key: 'type',           label: 'TYPE',            sortable: false },
-  { key: 'action',         label: '',                sortable: false },
+  { key: 'montant',       label: 'MONTANT',         sortable: true  },
+  { key: 'date_emission', label: "DATE D'ÉMISSION",  sortable: true  },
+  { key: 'date_echeance', label: "DATE D'ÉCHÉANCE",  sortable: true  },
+  { key: 'banque',        label: 'BANQUE',           sortable: false },
+  { key: 'tireur',        label: 'TIERS',            sortable: false },
+  { key: 'statut',        label: 'ÉTAT',             sortable: false },
+  { key: 'type_traite',   label: 'TYPE',             sortable: false },
+  { key: 'action',        label: '',                 sortable: false },
 ]
 
-// ── État ─────────────────────────────────────────────────────
-const traites      = ref<Traite[]>([])
-const loading      = ref(false)
-const toastMsg     = ref<string | null>(null)
-const toastType    = ref<'success' | 'error'>('success')
-const selectedIds  = ref<number[]>([])
-const searchQuery  = ref('')
-const filterEtat   = ref('')
-const filterType   = ref('')
-const sortKey      = ref('date_echeance')
-const sortDir      = ref<'asc' | 'desc'>('asc')
-const currentPage  = ref(1)
-const pageSize     = 8
-const showAddTraite  = ref(false)
-const showAddStatut  = ref(false)
+// ── État ──────────────────────────────────────────────────────
+const traites        = ref<TraiteAPI[]>([])
+const statuts        = ref<StatutTraite[]>([])
+const loading        = ref(false)
+const toastMsg       = ref<string | null>(null)
+const toastType      = ref<'success' | 'error'>('success')
+const selectedIds    = ref<number[]>([])
+const searchQuery    = ref('')
+const filterStatutId = ref<number | ''>('')
+const filterType     = ref('')
+const sortKey        = ref('date_echeance')
+const sortDir        = ref<'asc' | 'desc'>('asc')
+const currentPage    = ref(1)
+const pageSize       = 8
 
-// ── Mock data ─────────────────────────────────────────────────
-const mockTraites: Traite[] = [
-  { id: 1,  montant: 15000,  date_emission: '2024-01-10', date_echeance: '2024-04-10', banque: 'UBCI',   etat: 'payé',      type: 'client',      tiers: 'Mytek'    },
-  { id: 2,  montant: 8500,   date_emission: '2024-02-05', date_echeance: '2024-05-05', banque: 'UIB',    etat: 'non_payé',  type: 'client',      tiers: 'BestBuy'  },
-  { id: 3,  montant: 32000,  date_emission: '2024-01-20', date_echeance: '2024-07-20', banque: 'STB',    etat: 'non_échue', type: 'fournisseur', tiers: 'TechPro'  },
-  { id: 4,  montant: 5200,   date_emission: '2024-03-01', date_echeance: '2024-06-01', banque: 'BNA',    etat: 'en_caisse', type: 'client',      tiers: 'Carrefour'},
-  { id: 5,  montant: 19800,  date_emission: '2024-02-14', date_echeance: '2024-05-14', banque: 'UBCI',   etat: 'payé',      type: 'fournisseur', tiers: 'Samsung'  },
-  { id: 6,  montant: 7400,   date_emission: '2024-01-28', date_echeance: '2024-04-28', banque: 'Attijari',etat: 'non_payé', type: 'client',      tiers: 'Tunisair' },
-  { id: 7,  montant: 45000,  date_emission: '2024-03-10', date_echeance: '2024-09-10', banque: 'BIAT',   etat: 'non_échue', type: 'fournisseur', tiers: 'LG Corp'  },
-  { id: 8,  montant: 3100,   date_emission: '2024-02-20', date_echeance: '2024-05-20', banque: 'UIB',    etat: 'en_caisse', type: 'client',      tiers: 'Zara TN'  },
-  { id: 9,  montant: 12600,  date_emission: '2024-01-05', date_echeance: '2024-03-05', banque: 'BNA',    etat: 'payé',      type: 'client',      tiers: 'Mytek'    },
-  { id: 10, montant: 27000,  date_emission: '2024-03-22', date_echeance: '2024-08-22', banque: 'STB',    etat: 'non_échue', type: 'fournisseur', tiers: 'Dell TN'  },
-  { id: 11, montant: 6800,   date_emission: '2024-02-01', date_echeance: '2024-04-01', banque: 'UBCI',   etat: 'non_payé',  type: 'client',      tiers: 'iStyle'   },
-  { id: 12, montant: 9900,   date_emission: '2024-03-15', date_echeance: '2024-06-15', banque: 'BIAT',   etat: 'en_caisse', type: 'fournisseur', tiers: 'HP TN'    },
-]
+// ── Modal Statut ──────────────────────────────────────────────
+const showStatutModal = ref(false)
+const newStatut       = ref('')
+const savingStatut    = ref(false)
 
-// ── Fetch ─────────────────────────────────────────────────────
-async function fetchTraites() {
+function openAddStatut() {
+  router.push({ name: 'CreateStatutTraite' })
+}
+
+async function saveStatut() {
+  if (!newStatut.value.trim()) return
+  savingStatut.value = true
+  try {
+    const token = localStorage.getItem('auth_token')
+    const res = await fetch(`${API_BASE_URL}/statuts-traites`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ statut: newStatut.value.trim() }),
+    })
+    if (!res.ok) throw new Error()
+    const json = await res.json()
+    statuts.value.push(json.data)
+    showStatutModal.value = false
+    showToast('Statut créé avec succès.', 'success')
+  } catch {
+    showToast('Erreur lors de la création du statut.', 'error')
+  } finally {
+    savingStatut.value = false
+  }
+}
+
+// ── Fetch données ─────────────────────────────────────────────
+async function loadAll() {
   loading.value = true
   try {
-    // Remplacer par: const res = await fetch('/api/traites'); traites.value = await res.json()
-    await new Promise(r => setTimeout(r, 600)) // simulation latence
-    traites.value = mockTraites
+    const [traiteRes, statutRes] = await Promise.all([
+      fetchTraites(),
+      fetchStatuts(),
+    ])
+    traites.value = traiteRes.data as TraiteAPI[]
+    statuts.value = statutRes.data
   } catch {
-    showToast('Erreur lors du chargement des traites.', 'error')
+    showToast('Erreur lors du chargement des données.', 'error')
   } finally {
     loading.value = false
   }
 }
 
 // ── Stats ─────────────────────────────────────────────────────
-const totalTraites  = computed(() => traites.value.length)
-const totalMontant  = computed(() => traites.value.reduce((s, t) => s + t.montant, 0))
-const countByEtat   = (etat: EtatType) => computed(() => traites.value.filter(t => t.etat === etat).length).value
+const totalMontant   = computed(() => traites.value.reduce((s, t) => s + Number(t.montant), 0))
+const countByStatut  = (id: number) => traites.value.filter(t => t.statuts_traites_id === id).length
 
 // ── Filtres + Tri ─────────────────────────────────────────────
 const filteredTraites = computed(() => {
@@ -309,20 +363,23 @@ const filteredTraites = computed(() => {
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
     list = list.filter(t =>
-      t.tiers.toLowerCase().includes(q)   ||
-      t.banque.toLowerCase().includes(q)  ||
+      t.tireur?.raison_sociale?.toLowerCase().includes(q)          ||
+      t.compteBancaire?.banque?.nomBanque?.toLowerCase().includes(q) ||
       String(t.montant).includes(q)
     )
   }
-  if (filterEtat.value) list = list.filter(t => t.etat === filterEtat.value)
-  if (filterType.value) list = list.filter(t => t.type === filterType.value)
+
+  if (filterStatutId.value !== '')
+    list = list.filter(t => t.statuts_traites_id === filterStatutId.value)
+
+  if (filterType.value)
+    list = list.filter(t => t.type_traite === filterType.value)
 
   list.sort((a, b) => {
-    const va = (a as any)[sortKey.value]
-    const vb = (b as any)[sortKey.value]
-    const cmp = typeof va === 'number'
-      ? va - vb
-      : String(va).localeCompare(String(vb))
+    let va: any, vb: any
+    if (sortKey.value === 'montant') { va = Number(a.montant); vb = Number(b.montant) }
+    else { va = (a as any)[sortKey.value]; vb = (b as any)[sortKey.value] }
+    const cmp = typeof va === 'number' ? va - vb : String(va ?? '').localeCompare(String(vb ?? ''))
     return sortDir.value === 'asc' ? cmp : -cmp
   })
 
@@ -341,7 +398,7 @@ const visiblePages = computed(() => {
   return pages
 })
 
-watch([searchQuery, filterEtat, filterType], () => { currentPage.value = 1 })
+watch([searchQuery, filterStatutId, filterType], () => { currentPage.value = 1 })
 
 // ── Sélection ─────────────────────────────────────────────────
 const allPageSelected = computed(() =>
@@ -361,10 +418,25 @@ function toggleSelectAll() {
     paginatedTraites.value.forEach(t => { if (!selectedIds.value.includes(t.id)) selectedIds.value.push(t.id) })
 }
 
-function deleteSelected() {
-  traites.value = traites.value.filter(t => !selectedIds.value.includes(t.id))
-  selectedIds.value = []
-  showToast('Traite(s) supprimée(s) avec succès.', 'success')
+// Annuler les traites sélectionnées (updateStatus)
+async function cancelSelected() {
+  if (!selectedIds.value.length) return
+  try {
+    const token = localStorage.getItem('auth_token')
+    await Promise.all(
+      selectedIds.value.map(id =>
+        fetch(`${API_BASE_URL}/traites/${id}/status`, {
+          method: 'PATCH',
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        })
+      )
+    )
+    showToast('Traite(s) annulée(s) avec succès.', 'success')
+    selectedIds.value = []
+    await loadAll()
+  } catch {
+    showToast("Erreur lors de l'annulation.", 'error')
+  }
 }
 
 // ── Tri ───────────────────────────────────────────────────────
@@ -373,22 +445,30 @@ function sortBy(key: string) {
   else { sortKey.value = key; sortDir.value = 'asc' }
 }
 
+// ── Navigation ────────────────────────────────────────────────
+function goToCreate() {
+  router.push({ name: 'TraitesCreate' })
+}
+
+function editTraite(t: TraiteAPI) {
+  // router.push({ name: 'EditTraite', params: { id: t.id } })
+  showToast(`Modification de la traite #${t.id}`, 'success')
+}
+
 // ── Helpers ───────────────────────────────────────────────────
 function formatMontant(n: number): string {
-  return new Intl.NumberFormat('fr-TN', { style: 'currency', currency: 'TND', minimumFractionDigits: 0 }).format(n)
+  return new Intl.NumberFormat('fr-TN', { style: 'currency', currency: 'TND', minimumFractionDigits: 3 }).format(n)
 }
 
 function formatDate(d: string): string {
+  if (!d) return '—'
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-function isOverdue(t: Traite): boolean {
-  return t.etat === 'non_payé' && new Date(t.date_echeance) < new Date()
-}
-
-function editTraite(t: Traite) {
-  showToast(`Modification de la traite #${t.id}`, 'success')
-  // router.push({ name: 'EditTraite', params: { id: t.id } })
+function isOverdue(t: TraiteAPI): boolean {
+  const nonPayeStatut = statuts.value.find(s => s.statut.toLowerCase().includes('non_pay') || s.statut.toLowerCase() === 'non payé')
+  const isNonPaye = nonPayeStatut ? t.statuts_traites_id === nonPayeStatut.id : false
+  return isNonPaye && new Date(t.date_echeance) < new Date()
 }
 
 function showToast(msg: string, type: 'success' | 'error' = 'success') {
@@ -397,7 +477,7 @@ function showToast(msg: string, type: 'success' | 'error' = 'success') {
   setTimeout(() => { toastMsg.value = null }, 4000)
 }
 
-onMounted(fetchTraites)
+onMounted(loadAll)
 </script>
 
 <style scoped lang="scss">
@@ -467,8 +547,8 @@ onMounted(fetchTraites)
     color: #fff;
     box-shadow: 0 3px 10px rgba(109, 40, 217, 0.3);
     &:hover { opacity: 0.9; transform: translateY(-1px); }
+    &[disabled] { opacity: 0.45; cursor: not-allowed; transform: none; }
   }
-
   &--secondary-outline {
     background: #f5f3ff;
     color: #6d28d9;
@@ -476,7 +556,6 @@ onMounted(fetchTraites)
     &:hover { background: #ede9fe; }
     &[disabled] { opacity: 0.45; cursor: not-allowed; }
   }
-
   &--danger-outline {
     background: #fef2f2;
     color: #991b1b;
@@ -499,20 +578,18 @@ onMounted(fetchTraites)
   display: flex;
   align-items: center;
   gap: 14px;
-  min-width: 150px;
+  min-width: 140px;
   box-shadow: 0 4px 12px rgba(109, 40, 217, 0.2);
   flex: 1;
 
-  &--total    { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
-  &--montant  { background: linear-gradient(135deg, #5b21b6, #4c1d95); }
-  &--payé     { background: linear-gradient(135deg, #059669, #047857); }
-  &--nonpayé  { background: linear-gradient(135deg, #dc2626, #b91c1c); }
-  &--caisse   { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+  &--total   { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+  &--montant { background: linear-gradient(135deg, #5b21b6, #4c1d95); }
+  &--dynamic { background: linear-gradient(135deg, #0891b2, #0e7490); }
 }
 
 .stat-icon  { font-size: 22px; }
 .stat-value { font-size: 20px; font-weight: 700; line-height: 1; }
-.stat-label { font-size: 11px; opacity: 0.85; margin-top: 3px; }
+.stat-label { font-size: 11px; opacity: 0.85; margin-top: 3px; text-transform: capitalize; }
 
 /* ── Toast ───────────────────────────────────────────────────── */
 .toast {
@@ -539,6 +616,54 @@ onMounted(fetchTraites)
   padding: 2px 6px;
   border-radius: 4px;
   &:hover { opacity: 1; background: rgba(0,0,0,.06); }
+}
+
+/* ── Modal ───────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 28px 24px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 8px 32px rgba(109,40,217,0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e1b4b;
+  margin: 0;
+}
+
+.modal-input {
+  padding: 10px 14px;
+  border: 1px solid #ddd6fe;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: 'Outfit', sans-serif;
+  color: #1e1b4b;
+  outline: none;
+  &:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139,92,246,0.12); }
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 /* ── Panneau ─────────────────────────────────────────────────── */
@@ -587,19 +712,11 @@ onMounted(fetchTraites)
   background: #faf9ff;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
-
   &::placeholder { color: #9ca3af; }
-  &:focus {
-    border-color: #8b5cf6;
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
-  }
+  &:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12); }
 }
 
-.filters {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+.filters { display: flex; gap: 10px; flex-wrap: wrap; }
 
 .filter-select {
   padding: 9px 32px 9px 12px;
@@ -616,7 +733,6 @@ onMounted(fetchTraites)
   background-repeat: no-repeat;
   background-position: right 10px center;
   transition: border-color 0.2s;
-
   &:focus { border-color: #8b5cf6; }
 }
 
@@ -657,7 +773,6 @@ onMounted(fetchTraites)
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
-
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Table ───────────────────────────────────────────────────── */
@@ -684,32 +799,17 @@ onMounted(fetchTraites)
     user-select: none;
   }
 
-  .th--sortable {
-    cursor: pointer;
-    transition: color 0.15s;
-    &:hover { color: #6d28d9; }
-  }
-
-  .th--active { color: #4c1d95; }
-
-  .sort-icon {
-    margin-left: 4px;
-    opacity: 0.6;
-    font-size: 10px;
-  }
+  .th--sortable { cursor: pointer; transition: color 0.15s; &:hover { color: #6d28d9; } }
+  .th--active   { color: #4c1d95; }
+  .sort-icon    { margin-left: 4px; opacity: 0.6; font-size: 10px; }
 
   tbody tr {
     border-bottom: 1px solid #f5f3ff;
     cursor: pointer;
     transition: background 0.15s;
-
-    &:hover   { background: #faf9ff; }
+    &:hover      { background: #faf9ff; }
     &:last-child { border-bottom: none; }
-
-    &.selected {
-      background: #f5f3ff;
-      td { color: #4c1d95; }
-    }
+    &.selected   { background: #f5f3ff; td { color: #4c1d95; } }
   }
 
   td {
@@ -770,6 +870,8 @@ onMounted(fetchTraites)
   font-weight: 600;
 }
 
+.no-data { color: #d1d5db; }
+
 .link-btn {
   background: none;
   border: none;
@@ -787,9 +889,8 @@ onMounted(fetchTraites)
   text-align: center;
   padding: 60px 24px;
   color: #9ca3af;
-
   .empty-icon { font-size: 40px; margin-bottom: 12px; }
-  p   { font-size: 15px; font-weight: 600; color: #6b7280; margin: 0 0 6px; }
+  p    { font-size: 15px; font-weight: 600; color: #6b7280; margin: 0 0 6px; }
   span { font-size: 13px; }
 }
 
@@ -804,15 +905,8 @@ onMounted(fetchTraites)
   gap: 10px;
 }
 
-.pagination-info {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.pagination-controls {
-  display: flex;
-  gap: 6px;
-}
+.pagination-info { font-size: 13px; color: #6b7280; }
+.pagination-controls { display: flex; gap: 6px; }
 
 .page-btn {
   width: 32px;
@@ -835,20 +929,18 @@ onMounted(fetchTraites)
     border-color: #c4b5fd;
     color: #7c3aed;
   }
-
   &--active {
     background: linear-gradient(135deg, #7c3aed, #6d28d9);
     color: #fff;
     border-color: transparent;
     box-shadow: 0 2px 8px rgba(109, 40, 217, 0.3);
   }
-
   &[disabled] { opacity: 0.4; cursor: not-allowed; }
 }
 
 /* ── Transitions ─────────────────────────────────────────────── */
-.slide-down-enter-active,
-.slide-down-leave-active { transition: all 0.25s ease; }
-.slide-down-enter-from,
-.slide-down-leave-to     { opacity: 0; transform: translateY(-12px); }
+.slide-down-enter-active, .slide-down-leave-active { transition: all 0.25s ease; }
+.slide-down-enter-from,   .slide-down-leave-to     { opacity: 0; transform: translateY(-12px); }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from,   .fade-leave-to     { opacity: 0; }
 </style>

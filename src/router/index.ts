@@ -15,9 +15,9 @@ const router = createRouter({
 
     // ── AUTH ───────────────────────────────────────────────────
     { path: '/', redirect: '/login' },
-    { path: '/login',           component: LoginView,           meta: { guest: true } },
-    { path: '/signup',          component: () => import('@/views/SignupView.vue'),        meta: { guest: true } },
-    { path: '/forgot-password', component: ForgotPasswordView,  meta: { guest: true } },
+    { path: '/login',           component: LoginView,          meta: { guest: true } },
+    { path: '/signup',          component: () => import('@/views/SignupView.vue'),       meta: { guest: true } },
+    { path: '/forgot-password', component: ForgotPasswordView, meta: { guest: true } },
     { path: '/reset-password',  component: () => import('@/views/ResetPasswordView.vue') },
 
     // ── DASHBOARD ──────────────────────────────────────────────
@@ -33,6 +33,12 @@ const router = createRouter({
       path: '/traites',
       name: 'Traites',
       component: TraitesView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/traites/creer',
+      name: 'TraitesCreate',
+      component: () => import('@/views/TraitesCreateView.vue'),
       meta: { requiresAuth: true },
     },
 
@@ -85,6 +91,34 @@ const router = createRouter({
       path: '/utilisateurs/creer',
       name: 'CreateUtilisateur',
       component: () => import('@/views/CreateUtilisateur.vue'),
+      meta: { requiresAuth: true },
+    },
+
+    // ── ABONNEMENTS ────────────────────────────────────────────
+    {
+      path: '/abonnements',
+      name: 'Abonnements',
+      component: () => import('@/views/AbonnementsListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/abonnements/creer',
+      name: 'AbonnementsCreate',
+      component: () => import('@/views/AbonnementFormView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/abonnements/:id/edit',
+      name: 'AbonnementEdit',
+      component: () => import('@/views/EditAbonnementView.vue'),
+      props: true,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/abonnements/:id',
+      name: 'AbonnementsShow',
+      component: () => import('@/views/AbonnementFormView.vue'),
+      props: true,
       meta: { requiresAuth: true },
     },
   ],

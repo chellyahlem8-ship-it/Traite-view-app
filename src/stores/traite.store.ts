@@ -130,9 +130,8 @@ export const useTraiteStore = defineStore('traite', () => {
       f.compteBancaireId !== null &&
       f.montantTotal > 0 &&
       f.nombreTraites >= 1 &&
-      f.lieu.trim() !== '' &&
-      f.beneficiaire.trim() !== ''
-    );
+      f.lieu.trim() !== '' 
+      );
   });
 
   const montantParTraite = computed(() => {
@@ -225,12 +224,14 @@ export const useTraiteStore = defineStore('traite', () => {
       f.tireurAdresse = tier?.adresse ?? '';
       f.tireNom       = nomSociete;
       f.tireAdresse   = adresseSociete;
+      f.beneficiaire  = tier?.raison_sociale ?? '';
     } else {
       // Tireur = ma société | Tiré = client sélectionné
       f.tireurNom     = nomSociete;
       f.tireurAdresse = adresseSociete;
       f.tireNom       = tier?.raison_sociale ?? '';
       f.tireAdresse   = tier?.adresse ?? '';
+      f.beneficiaire  = nomSociete;
     }
 
     f.banqueNom = compte?.banque?.nomBanque ?? '';
