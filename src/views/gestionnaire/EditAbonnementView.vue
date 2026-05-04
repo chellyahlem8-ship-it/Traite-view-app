@@ -86,7 +86,7 @@
                   >
                     <option value="">Sélectionner une société…</option>
                     <option v-for="s in societes" :key="s.idSociete" :value="s.idSociete">
-                      {{ s.nomSociete }}
+                      {{ s.raisonSociale }}
                     </option>
                   </select>
                 </div>
@@ -113,7 +113,7 @@
                   >
                     <option value="">Sélectionner un tarif…</option>
                     <option v-for="t in tarifs" :key="t.idTarif" :value="t.idTarif">
-                      {{ t.nomTarif }}
+                      {{ t.nom }}
                     </option>
                   </select>
                 </div>

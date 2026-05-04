@@ -98,18 +98,18 @@
               <!-- Avatar -->
               <td class="td-avatar">
                 <div class="avatar">
-                  {{ initiales(ab.societe?.nomSociete ?? '?') }}
+                  {{ initiales(ab.societe?.raisonSociale ?? '?') }}
                 </div>
               </td>
 
               <!-- Société -->
               <td class="td-name">
-                <span class="tier-name">{{ ab.societe?.nomSociete ?? '—' }}</span>
+                <span class="tier-name">{{ ab.societe?.raisonSociale ?? '—' }}</span>
               </td>
 
               <!-- Tarif -->
               <td>
-                <span class="badge badge--purple">{{ ab.tarif?.nomTarif ?? '—' }}</span>
+                <span class="badge badge--purple">{{ ab.tarif?.nom ?? '—' }}</span>
               </td>
 
               <!-- Durée -->
@@ -163,7 +163,7 @@
           <h3 class="modal-title">Supprimer cet abonnement ?</h3>
           <p class="modal-body">
             L'abonnement de
-            <strong>{{ confirmTarget.societe?.nomSociete }}</strong>
+            <strong>{{ confirmTarget.societe?.raisonSociale }}</strong>
             sera définitivement supprimé.
           </p>
           <div class="modal-actions">
@@ -230,7 +230,7 @@ async function doDelete(): Promise<void> {
 }
 
 // ── Navigation ────────────────────────────────────────────────
-function goCreate(): void { router.push({ name: 'AbonnementFormView' }) }
+function goCreate(): void { router.push({ name: 'AbonnementsCreate' }) }
 function goEdit(): void   { if (selectedId.value) router.push({ name: 'EditAbonnementView', params: { id: selectedId.value } }) }
 function editRow(id: number): void { router.push({ name: 'EditAbonnementView', params: { id } }) }
 

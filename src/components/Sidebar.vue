@@ -49,13 +49,22 @@
 
       <!-- Société : gestionnaire, admin -->
       <router-link
-        v-if="can('societes:lire')"
+        v-if="can('societe:lire')"
         :to="{ name: 'Societe' }"
         class="nav-item"
         active-class="active"
         @click="closeSidebar"
       >
         <span class="nav-icon">🏢</span> Société
+      </router-link>
+      <router-link
+        v-if="can('societes:lire')"
+        :to="{ name: 'SocietesView' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
+        <span class="nav-icon">🏢</span> Listes des Sociétés
       </router-link>
 
       <!-- Utilisateurs : admin uniquement -->
@@ -91,6 +100,7 @@
       >
       <span class="nav-icon">📊</span> Tableau de bord abonnements
       </router-link>
+      
       <router-link
         v-if="can('abonnements:lire')"
         :to="{ name: 'Abonnements' }"

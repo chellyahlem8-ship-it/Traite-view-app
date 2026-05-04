@@ -26,6 +26,8 @@ export type Permission =
   // ── Sociétés ─────────────────────────────────────────────
   | 'societes:lire'
   | 'societes:modifier'
+  | 'societes:creer'
+  | 'societe:lire'
 
   // ── Traites ──────────────────────────────────────────────
   | 'traites:lire'

@@ -9,12 +9,12 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api'
 
 export interface Societe {
   idSociete: number
-  nomSociete: string
+  raisonSociale: string
 }
 
 export interface Tarif {
   idTarif: number
-  nomTarif: string
+  nom: string
   prix?: number
 }
 
@@ -197,12 +197,15 @@ export function useAbonnementForm() {
   }
 
   async function fetchSocietesEtTarifs(): Promise<{ societes: Societe[]; tarifs: Tarif[] }> {
-    const [societes, tarifs] = await Promise.all([
-      apiFetch<Societe[]>(`${BASE_URL}/societes`),
-      apiFetch<Tarif[]>(`${BASE_URL}/tarifs`),
-    ])
-    return { societes, tarifs }
+  const [resSocietes, resTarifs] = await Promise.all([
+    apiFetch<{ success: boolean; data: Societe[] }>(`${BASE_URL}/societes`),
+    apiFetch<{ success: boolean; data: Tarif[] }>(`${BASE_URL}/tarifs`),
+  ])
+  return {
+    societes: resSocietes.data,
+    tarifs:   resTarifs.data,
   }
+}
 
   async function createAbonnement(form: AbonnementFormData): Promise<boolean> {
     if (!validate(form)) return false

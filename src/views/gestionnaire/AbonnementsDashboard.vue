@@ -15,7 +15,12 @@
           title="Rafraîchir"
           @click="refresh"
         >
-          <IconRefresh />
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
         </button>
       </div>
     </div>
@@ -169,12 +174,12 @@
             <tbody>
               <tr v-for="ab in expirantBientot" :key="ab.idAbonnement">
                 <td class="td-avatar">
-                  <div class="avatar">{{ initiales(ab.societe?.nomSociete ?? '?') }}</div>
+                  <div class="avatar">{{ initiales(ab.societe?.raisonSociale ?? '?') }}</div>
                 </td>
                 <td class="td-name">
-                  <span class="tier-name">{{ ab.societe?.nomSociete ?? '—' }}</span>
+                  <span class="tier-name">{{ ab.societe?.raisonSociale ?? '—' }}</span>
                 </td>
-                <td><span class="badge badge--purple">{{ ab.tarif?.nomTarif ?? '—' }}</span></td>
+                <td><span class="badge badge--purple">{{ ab.tarif?.nom ?? '—' }}</span></td>
                 <td><span class="badge badge--blue">{{ ab.duree }}</span></td>
                 <td class="td-date">{{ formatDate(ab.dateFin) }}</td>
                 <td>
@@ -356,12 +361,6 @@ function joursClass(ab: Abonnement): string {
 }
 function formatMoney(val: number): string { return val.toLocaleString('fr-FR') }
 
-const IconRefresh = defineComponent({
-  template: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-  </svg>`,
-})
 
 onMounted(async () => { await refresh() })
 </script>

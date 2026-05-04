@@ -88,6 +88,12 @@ const router = createRouter({
           meta: { requiresAuth: true, permission: 'societes:lire' } satisfies RouteMeta,
         },
         {
+          path: 'societe/creer',
+          name: 'CreateSociete',
+          component: () => import('@/views/gestionnaire/CreerSocieteView.vue'),
+          meta: { requiresAuth: true, permission: 'societes:creer' } satisfies RouteMeta,
+        },
+        {
           path: 'societe/:societeId/comptes-bancaires/create',
           name: 'CreateCompteBancaireForSocieteAuth',
           component: () => import('@/views/public/CreateCompteBancaireForSociete.vue'),
@@ -159,6 +165,12 @@ const router = createRouter({
           path: 'societe',
           name: 'SocieteView',
           component: () => import('@/views/public/SocieteView.vue'),
+          meta: { requiresAuth: true, roles: ['admin', 'gestionnaire'] satisfies UserRole[] } satisfies RouteMeta,
+        },
+        {
+          path: 'societe',
+          name: 'SocietesView',
+          component: () => import('@/views/gestionnaire/SocietesView.vue'),
           meta: { requiresAuth: true, roles: ['admin', 'gestionnaire'] satisfies UserRole[] } satisfies RouteMeta,
         },
         {

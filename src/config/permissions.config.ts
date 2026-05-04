@@ -15,11 +15,17 @@ const BASE_PERMISSIONS: Permission[] = [
   'tiers:creer',
   'tiers:modifier',
   'tiers:supprimer',
-  'societes:lire',
+  'societe:lire',
+  'societes:modifier',
+
   // FIX #3 — comptesBancaires:creer was used in the router but never granted to any role.
   // All authenticated users need to create bank accounts for their tiers/societe.
   'comptesBancaires:lire',
   'comptesBancaires:creer',
+  'comptesBancaires:modifier',
+  'comptesBancaires:supprimer',
+
+
 ]
 
 // ── Permissions propres au gestionnaire ───────────────────────────
@@ -29,10 +35,9 @@ const GESTIONNAIRE_PERMISSIONS: Permission[] = [
   'abonnements:creer',
   'abonnements:modifier',
   'abonnements:supprimer',
-  'societes:modifier',
-  'comptesBancaires:modifier',
-  'comptesBancaires:supprimer',
   'dashboard_abonnements:lire',
+  'societes:creer',
+  'societes:lire',
 ]
 
 // ── Permissions admin = tout ───────────────────────────────────────
