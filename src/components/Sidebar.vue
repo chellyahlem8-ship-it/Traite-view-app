@@ -19,43 +19,90 @@
 
     <!-- NAV : scrollable si contenu dépasse -->
     <nav class="sidebar-nav">
+
+      <!-- Dashboard : tous les rôles authentifiés -->
       <router-link to="/dashboard" class="nav-item" active-class="active" @click="closeSidebar">
         <span class="nav-icon">🏠</span> Tableau de bord
       </router-link>
 
-      <router-link :to="{ name: 'Traites' }" class="nav-item" active-class="active" @click="closeSidebar">
+      <!-- Traites : utilisateur, gestionnaire, admin -->
+      <router-link
+        v-if="can('traites:lire')"
+        :to="{ name: 'Traites' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
         <span class="nav-icon">📄</span> Traites
       </router-link>
 
-
-      <router-link :to="{ name: 'Tiers' }" class="nav-item" active-class="active" @click="closeSidebar">
+      <!-- Tiers : utilisateur, gestionnaire, admin -->
+      <router-link
+        v-if="can('tiers:lire')"
+        :to="{ name: 'Tiers' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
         <span class="nav-icon">👥</span> Tiers
       </router-link>
 
-      <router-link :to="{ name: 'Societe' }" class="nav-item" active-class="active" @click="closeSidebar">
+      <!-- Société : gestionnaire, admin -->
+      <router-link
+        v-if="can('societes:lire')"
+        :to="{ name: 'Societe' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
         <span class="nav-icon">🏢</span> Société
       </router-link>
 
-      <router-link :to="{ name: 'Utilisateurs' }" class="nav-item" active-class="active" @click="closeSidebar">
+      <!-- Utilisateurs : admin uniquement -->
+      <router-link
+        v-if="can('utilisateurs:lire')"
+        :to="{ name: 'Utilisateurs' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
         <span class="nav-icon">👤</span> Utilisateurs
       </router-link>
 
-      <router-link :to="{ name: 'BanquesCreate' }" class="nav-item" active-class="active" @click="closeSidebar">
+      <!-- Banques : admin uniquement -->
+      <router-link
+        v-if="can('banques:creer')"
+        :to="{ name: 'CreateBanque' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
         <span class="nav-icon">🏦</span> Banques
       </router-link>
 
-      <router-link :to="{ name: 'CreateCompteBancaire' }" class="nav-item" active-class="active" @click="closeSidebar">
-        <span class="nav-icon">💳</span> Comptes bancaires
+      
+      <!-- Abonnements : gestionnaire, admin -->
+       <router-link
+        v-if="can('dashboard_abonnements:lire')"
+        :to="{ name: 'DashboardAbonnements' }"
+        class="nav-item"
+        active-class="active"
+        @click="closeSidebar"
+      >
+      <span class="nav-icon">📊</span> Tableau de bord abonnements
       </router-link>
       <router-link
+        v-if="can('abonnements:lire')"
         :to="{ name: 'Abonnements' }"
         class="nav-item"
         active-class="active"
         @click="closeSidebar"
       >
-        <span class="nav-icon">💳</span> Abonnements
+        <span class="nav-icon">🔄</span> Abonnements
       </router-link>
+      
 
+      <!-- Items désactivés (à venir) -->
       <button class="nav-item" disabled>
         <span class="nav-icon">💰</span> Trésorerie
       </button>
@@ -63,11 +110,16 @@
       <button class="nav-item" disabled>
         <span class="nav-icon">⚙️</span> Paramètres
       </button>
-      
+
     </nav>
 
     <!-- LOGOUT : fixe en bas, jamais caché -->
     <div class="sidebar-footer">
+      <!-- Badge rôle -->
+      <div class="role-badge" v-if="currentRole">
+        <span class="role-dot"></span>
+        {{ roleLabel }}
+      </div>
       <button class="logout-btn" @click="handleLogout">
         <span>🚪</span> Déconnexion
       </button>
@@ -77,16 +129,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
+import { useAuthStore } from '@/stores/auth.store'
 import TraityLogo from '@/components/TraityLogo.vue'
+import type { Permission } from '@/types/rbac.types'
 
 const { logout } = useAuth()
+const authStore = useAuthStore()
+
 const handleLogout = () => { logout() }
 
 const isOpen = ref(false)
 const toggleSidebar = () => { isOpen.value = !isOpen.value }
 const closeSidebar  = () => { isOpen.value = false }
+
+/** Rôle courant de l'utilisateur connecté */
+const currentRole = computed(() => authStore.currentRole)
+
+/** Libellé lisible du rôle */
+const roleLabel = computed(() => {
+  switch (currentRole.value) {
+    case 'admin':        return 'Administrateur'
+    case 'gestionnaire': return 'Gestionnaire'
+    default:             return 'Utilisateur'
+  }
+})
+
+/**
+ * Vérifie si l'utilisateur possède une permission donnée.
+ * Délègue à authStore.hasPermission (déjà implémenté dans le store).
+ */
+const can = (permission: Permission): boolean => {
+  return authStore.hasPermission(permission)
+}
 </script>
 
 <style scoped lang="scss">
@@ -157,13 +233,12 @@ const closeSidebar  = () => { isOpen.value = false }
   width: 240px;
   height: 100vh;
   background: linear-gradient(180deg, #2e1065 0%, #4c1d95 100%);
-  /* ✅ Clé : flex column pour pousser le footer tout en bas */
   display: flex;
   flex-direction: column;
   z-index: 9999;
   box-shadow: 4px 0 24px rgba(76, 29, 149, 0.3);
   font-family: 'Outfit', sans-serif;
-  overflow: hidden; /* pas de scroll global sur la sidebar */
+  overflow: hidden;
 
   @media (max-width: 768px) {
     transform: translateX(-100%);
@@ -173,21 +248,20 @@ const closeSidebar  = () => { isOpen.value = false }
 }
 
 .sidebar-logo {
-  flex-shrink: 0; /* ne rétrécit jamais */
+  flex-shrink: 0;
   padding: 24px 20px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-nav {
-  flex: 1;           /* prend tout l'espace disponible entre logo et footer */
-  overflow-y: auto;  /* scroll uniquement dans la nav si trop d'items */
+  flex: 1;
+  overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding: 12px 10px;
 
-  /* Scrollbar discrète */
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.15) transparent;
   &::-webkit-scrollbar { width: 3px; }
@@ -232,11 +306,33 @@ const closeSidebar  = () => { isOpen.value = false }
 
 .nav-icon { font-size: 16px; width: 20px; text-align: center; }
 
-/* ✅ Footer toujours collé en bas */
 .sidebar-footer {
   flex-shrink: 0;
   padding: 12px 10px 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.role-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.role-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(167, 139, 250, 0.7);
+  flex-shrink: 0;
 }
 
 .logout-btn {

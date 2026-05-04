@@ -93,11 +93,7 @@
             {{ fmtRib(D.rib) }}
           </span>
 
-          <!-- TALON - Banque (à droite dans le talon) -->
-          <span class="tf tf-small" style="top:63.5%; left:74%; max-width:22%;">
-            {{ D.banqueNom }}
-          </span>
-
+          
           <!-- ══════════════════════════════════════════════
                TIRÉ (المسحوب عليه) — zone bas-droite
                Case "Nom et adresse du Tiré" :

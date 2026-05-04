@@ -1,3 +1,7 @@
+// ============================================================
+// composables/useAuth.ts  — FIXED
+// ============================================================
+
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
@@ -18,17 +22,29 @@ export function useAuth() {
     try {
       const response = await authApi.login(payload)
 
-      // ✅ Vérification sécurité
       if (!response.access_token) {
         throw new Error('Token manquant dans la réponse API')
       }
 
-      // ✅ Stockage correct
-      localStorage.setItem('traity_token', response.access_token)
+      // FIX #7 — removed duplicate localStorage.setItem here.
+      // authStore.setAuth() already calls localStorage.setItem(TOKEN_KEY, token).
       authStore.setAuth(response.access_token, response.utilisateur)
 
-      // ✅ Redirection
-      await router.push('/dashboard')
+      // FIX #8 — role-aware redirect instead of always pushing to /dashboard.
+      // Also honour the ?redirect= query param set by the navigation guard.
+      const redirectPath = router.currentRoute.value.query.redirect as string | undefined
+      if (redirectPath) {
+        await router.push(redirectPath)
+      } else {
+        const role = authStore.currentRole
+        if (role === 'admin') {
+          await router.push({ name: 'Utilisateurs' })
+        } else if (role === 'gestionnaire') {
+          await router.push({ name: 'DashboardAbonnements' })
+        } else {
+          await router.push({ name: 'DashboardView' })
+        }
+      }
 
     } catch (e: unknown) {
       errorMsg.value =
