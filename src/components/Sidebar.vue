@@ -1,23 +1,18 @@
 <template>
-  <!-- Bouton hamburger (visible seulement sur mobile) -->
   <button class="hamburger-btn" @click="toggleSidebar" :aria-expanded="isOpen" aria-label="Menu">
     <span class="hamburger-line" :class="{ open: isOpen }"></span>
     <span class="hamburger-line" :class="{ open: isOpen }"></span>
     <span class="hamburger-line" :class="{ open: isOpen }"></span>
   </button>
 
-  <!-- Overlay sombre (mobile uniquement) -->
   <div class="sidebar-overlay" :class="{ visible: isOpen }" @click="closeSidebar"></div>
 
-  <!-- Sidebar -->
   <aside class="sidebar" :class="{ 'sidebar--open': isOpen }">
 
-    <!-- LOGO : fixe en haut -->
     <div class="sidebar-logo">
       <TraityLogo :size="28" show-text />
     </div>
 
-    <!-- NAV : scrollable si contenu dépasse -->
     <nav class="sidebar-nav">
       <router-link to="/dashboard" class="nav-item" active-class="active" @click="closeSidebar">
         <span class="nav-icon">🏠</span> Tableau de bord
@@ -26,7 +21,6 @@
       <router-link :to="{ name: 'Traites' }" class="nav-item" active-class="active" @click="closeSidebar">
         <span class="nav-icon">📄</span> Traites
       </router-link>
-
 
       <router-link :to="{ name: 'Tiers' }" class="nav-item" active-class="active" @click="closeSidebar">
         <span class="nav-icon">👥</span> Tiers
@@ -40,19 +34,7 @@
         <span class="nav-icon">👤</span> Utilisateurs
       </router-link>
 
-      <router-link :to="{ name: 'BanquesCreate' }" class="nav-item" active-class="active" @click="closeSidebar">
-        <span class="nav-icon">🏦</span> Banques
-      </router-link>
-
-      <router-link :to="{ name: 'CreateCompteBancaire' }" class="nav-item" active-class="active" @click="closeSidebar">
-        <span class="nav-icon">💳</span> Comptes bancaires
-      </router-link>
-      <router-link
-        :to="{ name: 'Abonnements' }"
-        class="nav-item"
-        active-class="active"
-        @click="closeSidebar"
-      >
+      <router-link :to="{ name: 'Abonnements' }" class="nav-item" active-class="active" @click="closeSidebar">
         <span class="nav-icon">💳</span> Abonnements
       </router-link>
 
@@ -63,10 +45,8 @@
       <button class="nav-item" disabled>
         <span class="nav-icon">⚙️</span> Paramètres
       </button>
-      
     </nav>
 
-    <!-- LOGOUT : fixe en bas, jamais caché -->
     <div class="sidebar-footer">
       <button class="logout-btn" @click="handleLogout">
         <span>🚪</span> Déconnexion
@@ -142,7 +122,6 @@ const closeSidebar  = () => { isOpen.value = false }
   @media (max-width: 768px) {
     display: block;
     pointer-events: none;
-
     &.visible {
       opacity: 1;
       pointer-events: auto;
@@ -157,13 +136,12 @@ const closeSidebar  = () => { isOpen.value = false }
   width: 240px;
   height: 100vh;
   background: linear-gradient(180deg, #2e1065 0%, #4c1d95 100%);
-  /* ✅ Clé : flex column pour pousser le footer tout en bas */
   display: flex;
   flex-direction: column;
   z-index: 9999;
   box-shadow: 4px 0 24px rgba(76, 29, 149, 0.3);
   font-family: 'Outfit', sans-serif;
-  overflow: hidden; /* pas de scroll global sur la sidebar */
+  overflow: hidden;
 
   @media (max-width: 768px) {
     transform: translateX(-100%);
@@ -173,21 +151,19 @@ const closeSidebar  = () => { isOpen.value = false }
 }
 
 .sidebar-logo {
-  flex-shrink: 0; /* ne rétrécit jamais */
+  flex-shrink: 0;
   padding: 24px 20px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-nav {
-  flex: 1;           /* prend tout l'espace disponible entre logo et footer */
-  overflow-y: auto;  /* scroll uniquement dans la nav si trop d'items */
+  flex: 1;
+  overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding: 12px 10px;
-
-  /* Scrollbar discrète */
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.15) transparent;
   &::-webkit-scrollbar { width: 3px; }
@@ -232,7 +208,6 @@ const closeSidebar  = () => { isOpen.value = false }
 
 .nav-icon { font-size: 16px; width: 20px; text-align: center; }
 
-/* ✅ Footer toujours collé en bas */
 .sidebar-footer {
   flex-shrink: 0;
   padding: 12px 10px 20px;

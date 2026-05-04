@@ -19,6 +19,7 @@
 
       <!-- ── Cartes statistiques ───────────────────────────────── -->
       <div class="stats-bar">
+        <!-- Total traites : nombre uniquement, pas de montant -->
         <div class="stat-card stat-card--total">
           <span class="stat-icon">📄</span>
           <div>
@@ -26,19 +27,27 @@
             <div class="stat-label">Total traites</div>
           </div>
         </div>
-        <div class="stat-card stat-card--montant">
-          <span class="stat-icon">💰</span>
+
+        <!-- Trésorerie : +client -fournisseur -->
+        <div class="stat-card stat-card--tresorerie">
+          <span class="stat-icon">🏦</span>
           <div>
-            <div class="stat-value">{{ formatMontant(totalMontant) }}</div>
-            <div class="stat-label">Montant total</div>
+            <div class="stat-value" :class="tresorerie >= 0 ? 'val-positive' : 'val-negative'">
+              {{ formatMontant(Math.abs(tresorerie)) }}
+            </div>
+            <div class="stat-label">Trésorerie</div>
+            <div class="stat-sub">{{ tresorerie >= 0 ? '▲ Encaissements nets' : '▼ Décaissements nets' }}</div>
           </div>
         </div>
+
+        <!-- Cartes par statut : nombre de traites uniquement (pas de montant) -->
         <div
           v-for="st in statuts"
           :key="st.id"
           class="stat-card stat-card--dynamic"
+          :class="getStatCardClass(st.statut)"
         >
-          <span class="stat-icon">🏷</span>
+          <span class="stat-icon">{{ getStatIcon(st.statut) }}</span>
           <div>
             <div class="stat-value">{{ countByStatut(st.id) }}</div>
             <div class="stat-label">{{ st.statut }}</div>
@@ -54,22 +63,47 @@
         </div>
       </Transition>
 
-      <!-- ── Modal Ajouter Statut Traite ──────────────────────── -->
+      <!-- ── Modal Modifier Statut d'une Traite ──────────────────────── -->
       <Transition name="fade">
-        <div v-if="showStatutModal" class="modal-overlay" @click.self="showStatutModal = false">
+        <div v-if="showEditStatutModal" class="modal-overlay" @click.self="closeEditStatutModal">
           <div class="modal-box">
-            <h3 class="modal-title">Ajouter un statut de traite</h3>
-            <input
-              v-model="newStatut"
-              class="modal-input"
-              type="text"
-              placeholder="Ex: En attente, Remis en banque…"
-              @keyup.enter="saveStatut"
-            />
+            <div class="modal-header">
+              <h3 class="modal-title">Modifier le statut de la traite</h3>
+              <button class="modal-close-btn" @click="closeEditStatutModal">✕</button>
+            </div>
+            <p class="modal-subtitle">
+              Traite #{{ editingTraite?.id }} —
+              <strong>{{ formatMontant(editingTraite?.montant ?? 0) }}</strong>
+            </p>
+            <!-- UTILISATION DE LA LISTE FILTRÉE ICI -->
+            <div class="statut-options">
+              <label
+                v-for="st in availableStatutsForEdit"
+                :key="st.id"
+                class="statut-option"
+                :class="{ 'statut-option--selected': editingStatutId === st.id }"
+                @click="editingStatutId = st.id"
+              >
+                <input
+                  type="radio"
+                  :value="st.id"
+                  v-model="editingStatutId"
+                  class="statut-radio"
+                />
+                <span :class="['badge-statut', getBadgeClass(st.statut)]">
+                  <span class="badge-dot"></span>
+                  {{ st.statut }}
+                </span>
+              </label>
+            </div>
             <div class="modal-actions">
-              <button class="btn btn--secondary-outline" @click="showStatutModal = false">Annuler</button>
-              <button class="btn btn--primary" :disabled="!newStatut.trim() || savingStatut" @click="saveStatut">
-                {{ savingStatut ? 'Enregistrement…' : 'Enregistrer' }}
+              <button class="btn btn--secondary-outline" @click="closeEditStatutModal">Annuler</button>
+              <button
+                class="btn btn--primary"
+                :disabled="!editingStatutId || savingEditStatut"
+                @click="saveEditStatut"
+              >
+                {{ savingEditStatut ? 'Enregistrement…' : 'Enregistrer' }}
               </button>
             </div>
           </div>
@@ -92,7 +126,6 @@
           </div>
 
           <div class="filters">
-            <!-- Filtre statut : options chargées depuis l'API -->
             <select v-model="filterStatutId" class="filter-select">
               <option value="">Tous les états</option>
               <option v-for="st in statuts" :key="st.id" :value="st.id">
@@ -160,15 +193,12 @@
                     @change="toggleSelect(traite.id)" />
                 </td>
 
-                <!-- Montant -->
                 <td class="td-montant">
                   <span class="montant-value">{{ formatMontant(traite.montant) }}</span>
                 </td>
 
-                <!-- Date émission -->
                 <td class="td-date">{{ formatDate(traite.date_emission) }}</td>
 
-                <!-- Date échéance -->
                 <td class="td-date">
                   <span :class="['echeance-text', isOverdue(traite) ? 'echeance--overdue' : '']">
                     {{ formatDate(traite.date_echeance) }}
@@ -176,36 +206,40 @@
                   </span>
                 </td>
 
-                <!-- Banque -->
                 <td class="td-banque">
-                  <span v-if="traite.compteBancaire?.banque" class="banque-chip">
-                    🏦 {{ traite.compteBancaire.banque.nomBanque }}
+                  <span v-if="getBanqueName(traite)" class="banque-chip">
+                    🏦 {{ getBanqueName(traite) }}
                   </span>
                   <span v-else class="no-data">—</span>
                 </td>
 
-                <!-- Tiers (tireur) -->
                 <td class="td-tiers">
                   <span v-if="traite.tireur">{{ traite.tireur.raison_sociale }}</span>
                   <span v-else class="no-data">—</span>
                 </td>
 
-                <!-- Statut -->
-                <td class="td-etat">
-                  <StatusBadge
-                    v-if="traite.statutTraite"
-                    :value="traite.statutTraite.statut"
-                    kind="etat"
-                  />
-                  <span v-else class="no-data">—</span>
+                <td class="td-etat" @click.stop>
+                  <div class="etat-cell">
+                    <span :class="['badge-statut', getBadgeClassForTraite(traite)]">
+                      <span class="badge-dot"></span>
+                      {{ getDisplayLabel(traite) }}
+                    </span>
+                    <button
+                      class="edit-statut-btn"
+                      title="Modifier le statut"
+                      @click.stop="openEditStatut(traite)"
+                    >
+                      ✏️
+                    </button>
+                  </div>
                 </td>
 
-                <!-- Type -->
                 <td class="td-type">
-                  <StatusBadge :value="traite.type_traite" kind="type" />
+                  <span :class="['badge-type', traite.type_traite === 'client' ? 'badge-type--client' : 'badge-type--fournisseur']">
+                    {{ traite.type_traite === 'client' ? '👤 Client' : '🏭 Fournisseur' }}
+                  </span>
                 </td>
 
-                <!-- Action -->
                 <td class="td-action" @click.stop>
                   <button class="link-btn" @click="editTraite(traite)">Modifier</button>
                 </td>
@@ -214,14 +248,12 @@
           </table>
         </div>
 
-        <!-- Vide -->
         <div v-else class="empty-state">
           <div class="empty-icon">📄</div>
           <p>Aucune traite trouvée.</p>
           <span>Modifiez vos filtres ou ajoutez une nouvelle traite.</span>
         </div>
 
-        <!-- Pagination -->
         <div class="pagination-bar" v-if="totalPages > 1">
           <span class="pagination-info">
             {{ (currentPage - 1) * pageSize + 1 }}–{{ Math.min(currentPage * pageSize, filteredTraites.length) }}
@@ -247,14 +279,33 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
-import StatusBadge from '@/components/StatusBadge.vue'
-import { fetchTraites, fetchStatuts } from '@/api/traite.api'
+import { fetchTraites, fetchStatuts, fetchComptesBancaires } from '@/api/traite.api'
+import { banquesApi } from '@/api/banques.api'
 import type { StatutTraite } from '@/types/traite.types'
 
 const router = useRouter()
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
-// ── Types locaux (réponse réelle du backend) ──────────────────
+interface BanqueRaw {
+  id?: number
+  nomBanque?: string
+  nom_banque?: string
+  nom?: string
+  name?: string
+}
+
+interface CompteBancaireRaw {
+  id?: number
+  rib?: string
+  banque?: BanqueRaw
+  banques_id?: number
+}
+
+interface StatutTraiteRaw {
+  id: number
+  statut: string
+}
+
 interface TraiteAPI {
   id: number
   montant: number
@@ -263,32 +314,20 @@ interface TraiteAPI {
   date_echeance: string
   comptes_bancaires_id: number
   statuts_traites_id: number
-  tireur_id: number
-  tireur_type: string
-  compteBancaire?: {
-    id: number
-    rib: string
-    banque?: { id: number; nomBanque: string }
-  }
-  statutTraite?: { id: number; statut: string }
+  tireur_id?: number
+  tireur_type?: string
+  compteBancaire?: CompteBancaireRaw
+  compte_bancaire?: CompteBancaireRaw
+  statutTraite?: StatutTraiteRaw
+  statut_traite?: StatutTraiteRaw
   tireur?: { id: number; raison_sociale: string }
 }
 
-// ── Colonnes ──────────────────────────────────────────────────
-const columns = [
-  { key: 'montant',       label: 'MONTANT',         sortable: true  },
-  { key: 'date_emission', label: "DATE D'ÉMISSION",  sortable: true  },
-  { key: 'date_echeance', label: "DATE D'ÉCHÉANCE",  sortable: true  },
-  { key: 'banque',        label: 'BANQUE',           sortable: false },
-  { key: 'tireur',        label: 'TIERS',            sortable: false },
-  { key: 'statut',        label: 'ÉTAT',             sortable: false },
-  { key: 'type_traite',   label: 'TYPE',             sortable: false },
-  { key: 'action',        label: '',                 sortable: false },
-]
-
-// ── État ──────────────────────────────────────────────────────
 const traites        = ref<TraiteAPI[]>([])
 const statuts        = ref<StatutTraite[]>([])
+const allBanques     = ref<BanqueRaw[]>([])
+const allComptes     = ref<CompteBancaireRaw[]>([])
+
 const loading        = ref(false)
 const toastMsg       = ref<string | null>(null)
 const toastType      = ref<'success' | 'error'>('success')
@@ -301,41 +340,143 @@ const sortDir        = ref<'asc' | 'desc'>('asc')
 const currentPage    = ref(1)
 const pageSize       = 8
 
-// ── Modal Statut ──────────────────────────────────────────────
-const showStatutModal = ref(false)
-const newStatut       = ref('')
-const savingStatut    = ref(false)
+const showEditStatutModal = ref(false)
+const editingTraite       = ref<TraiteAPI | null>(null)
+const editingStatutId     = ref<number | null>(null)
+const savingEditStatut    = ref(false)
 
-function openAddStatut() {
-  router.push({ name: 'CreateStatutTraite' })
+const columns = [
+  { key: 'montant',       label: 'MONTANT',         sortable: true  },
+  { key: 'date_emission', label: "DATE D'ÉMISSION",  sortable: true  },
+  { key: 'date_echeance', label: "DATE D'ÉCHÉANCE",  sortable: true  },
+  { key: 'banque',        label: 'BANQUE',           sortable: false },
+  { key: 'tireur',        label: 'TIERS',            sortable: false },
+  { key: 'statut',        label: 'ÉTAT',             sortable: false },
+  { key: 'type_traite',   label: 'TYPE',             sortable: false },
+  { key: 'action',        label: '',                 sortable: false },
+]
+
+// ── LOGIQUE CORRIGÉE : Filtrage des statuts pour la modal ─────────────────────
+// Règle 2 : Client = (En caisse, Impayée, Non échue) | Fournisseur = (Payée, Impayée, Non échue)
+const availableStatutsForEdit = computed(() => {
+  if (!editingTraite.value) return []
+
+  const type = editingTraite.value.type_traite
+  const allowedLabels = type === 'client' 
+    ? ['En caisse', 'Impayée', 'Non échue'] 
+    : ['Payée', 'Impayée', 'Non échue']
+
+  // On filtre la liste complète des statuts venant de la base
+  return statuts.value.filter(s => allowedLabels.includes(s.statut))
+})
+
+function getBanqueName(traite: TraiteAPI): string | null {
+  const cbEager = traite.compteBancaire ?? traite.compte_bancaire
+  if (cbEager?.banque) {
+    return cbEager.banque.nomBanque ?? cbEager.banque.nom_banque ?? cbEager.banque.nom ?? cbEager.banque.name ?? null
+  }
+  const compte = allComptes.value.find(c => c.id === traite.comptes_bancaires_id)
+  if (compte?.banque) {
+    return compte.banque.nomBanque ?? compte.banque.nom_banque ?? compte.banque.nom ?? null
+  }
+  if (compte && (compte as any).banques_id) {
+    const banque = allBanques.value.find(b => b.id === (compte as any).banques_id)
+    if (banque) return banque.nomBanque ?? banque.nom ?? null
+  }
+  return null
 }
 
-async function saveStatut() {
-  if (!newStatut.value.trim()) return
-  savingStatut.value = true
-  try {
-    const token = localStorage.getItem('auth_token')
-    const res = await fetch(`${API_BASE_URL}/statuts-traites`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ statut: newStatut.value.trim() }),
+// ── Comptage par statut (nombre uniquement) ──
+function countByStatut(id: number): number {
+  return traites.value.filter(t => t.statuts_traites_id === id).length
+}
+
+// ── Trésorerie : +client, -fournisseur ──
+const tresorerie = computed(() =>
+  traites.value
+    .filter(t => {
+      const rel = t.statutTraite ?? t.statut_traite
+      const label = (rel as any)?.statut ?? ''
+      const s = label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      // Réglé = "payée" (fourn) ou "en caisse" (client) — hors "non", "impay", "annul"
+      if (s.includes('impay') || s.includes('non') || s.includes('annul')) return false
+      return s.startsWith('pay') || s.includes('caisse')
     })
-    if (!res.ok) throw new Error()
-    const json = await res.json()
-    statuts.value.push(json.data)
-    showStatutModal.value = false
-    showToast('Statut créé avec succès.', 'success')
-  } catch {
-    showToast('Erreur lors de la création du statut.', 'error')
-  } finally {
-    savingStatut.value = false
+    .reduce((sum, t) => {
+      const m = Number(t.montant)
+      return sum + (t.type_traite === 'client' ? m : -m)
+    }, 0)
+)
+
+function getRawStatutLabel(traite: TraiteAPI): string {
+  const rel = traite.statutTraite ?? traite.statut_traite
+  if (rel?.statut) return rel.statut
+  if (traite.statuts_traites_id) {
+    const found = statuts.value.find(s => s.id === traite.statuts_traites_id)
+    if (found) return found.statut
+  }
+  return 'Non échue'
+}
+
+function isOverdue(traite: TraiteAPI): boolean {
+  const label = getRawStatutLabel(traite)
+  const s = label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (s.includes('pay') && !s.includes('non')) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return new Date(traite.date_echeance) < today
+}
+
+function getDisplayLabel(traite: TraiteAPI): string {
+  return getRawStatutLabel(traite)
+}
+
+function getBadgeClass(statut: string): string {
+  const s = statut.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (s.includes('caisse'))                                               return 'badge-statut--caisse'
+  if (s.includes('pay') && !s.includes('non') && !s.includes('im'))      return 'badge-statut--success'
+  if (s.includes('impay') || s.includes('impaye'))                        return 'badge-statut--danger'
+  if (s.includes('echu') && !s.includes('non'))                           return 'badge-statut--info'
+  if (s.includes('non') && s.includes('echu'))                            return 'badge-statut--warning'
+  return 'badge-statut--warning'
+}
+
+function getBadgeClassForTraite(traite: TraiteAPI): string {
+  return getBadgeClass(getDisplayLabel(traite))
+}
+
+function getStatIcon(statut: string): string {
+  const s = statut.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (s.includes('caisse'))                                          return '🏦'
+  if (s.includes('pay') && !s.includes('non') && !s.includes('im')) return '✅'
+  if (s.includes('impay'))                                           return '❌'
+  if (s.includes('echu') && !s.includes('non'))                      return '🚨'
+  if (s.includes('non') && s.includes('echu'))                       return '⏳'
+  return '🏷'
+}
+
+function getStatCardClass(statut: string): string {
+  const s = statut.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (s.includes('caisse'))                                          return 'stat-card--caisse'
+  if (s.includes('pay') && !s.includes('non') && !s.includes('im')) return 'stat-card--payee'
+  if (s.includes('impay'))                                           return 'stat-card--impayee'
+  if (s.includes('echu') && !s.includes('non'))                      return 'stat-card--echue'
+  return 'stat-card--non-echue'
+}
+
+function getToken(): string | null {
+  return localStorage.getItem('traity_token') || localStorage.getItem('auth_token')
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getToken()
+  return {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   }
 }
 
-// ── Fetch données ─────────────────────────────────────────────
 async function loadAll() {
   loading.value = true
   try {
@@ -343,34 +484,91 @@ async function loadAll() {
       fetchTraites(),
       fetchStatuts(),
     ])
-    traites.value = traiteRes.data as TraiteAPI[]
     statuts.value = statutRes.data
-  } catch {
+    traites.value = traiteRes.data as TraiteAPI[]
+
+    const [banquesRes, comptesRes] = await Promise.all([
+      banquesApi.getAll(),
+      fetchComptesBancaires(),
+    ])
+    allBanques.value = banquesRes.data as BanqueRaw[]
+    allComptes.value = comptesRes.data as CompteBancaireRaw[]
+
+  } catch (e) {
+    console.error(e)
     showToast('Erreur lors du chargement des données.', 'error')
   } finally {
     loading.value = false
   }
 }
 
-// ── Stats ─────────────────────────────────────────────────────
-const totalMontant   = computed(() => traites.value.reduce((s, t) => s + Number(t.montant), 0))
-const countByStatut  = (id: number) => traites.value.filter(t => t.statuts_traites_id === id).length
+function openEditStatut(traite: TraiteAPI) {
+  editingTraite.value    = traite
+  editingStatutId.value  = traite.statuts_traites_id
+  showEditStatutModal.value = true
+}
 
-// ── Filtres + Tri ─────────────────────────────────────────────
+function closeEditStatutModal() {
+  showEditStatutModal.value = false
+  editingTraite.value       = null
+  editingStatutId.value     = null
+}
+
+async function saveEditStatut() {
+  if (!editingTraite.value || !editingStatutId.value) return
+  savingEditStatut.value = true
+
+  try {
+    // ✅ Utiliser PUT /traites/{id} avec statuts_traites_id — persiste en base
+    const res = await fetch(`${API_BASE_URL}/traites/${editingTraite.value.id}`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ statuts_traites_id: editingStatutId.value }),
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Erreur serveur' }))
+      throw new Error(err.message || 'Erreur serveur')
+    }
+
+    // Mettre à jour localement sans recharger
+    const foundStatut = statuts.value.find(s => s.id === editingStatutId.value)
+    const idx = traites.value.findIndex(t => t.id === editingTraite.value!.id)
+    if (idx !== -1) {
+      traites.value = traites.value.map((t, i) => {
+        if (i !== idx) return t
+        return {
+          ...t,
+          statuts_traites_id: editingStatutId.value!,
+          statutTraite:  foundStatut ? { id: foundStatut.id, statut: foundStatut.statut } : t.statutTraite,
+          statut_traite: foundStatut ? { id: foundStatut.id, statut: foundStatut.statut } : t.statut_traite,
+        }
+      })
+    }
+
+    showToast('Statut mis à jour avec succès.', 'success')
+    closeEditStatutModal()
+  } catch (err: any) {
+    showToast(err.message || 'Erreur lors de la mise à jour.', 'error')
+  } finally {
+    savingEditStatut.value = false
+  }
+}
+
 const filteredTraites = computed(() => {
   let list = [...traites.value]
 
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
     list = list.filter(t =>
-      t.tireur?.raison_sociale?.toLowerCase().includes(q)          ||
-      t.compteBancaire?.banque?.nomBanque?.toLowerCase().includes(q) ||
+      t.tireur?.raison_sociale?.toLowerCase().includes(q) ||
+      getBanqueName(t)?.toLowerCase().includes(q)        ||
       String(t.montant).includes(q)
     )
   }
 
   if (filterStatutId.value !== '')
-    list = list.filter(t => t.statuts_traites_id === filterStatutId.value)
+    list = list.filter(t => t.statuts_traites_id === Number(filterStatutId.value))
 
   if (filterType.value)
     list = list.filter(t => t.type_traite === filterType.value)
@@ -386,7 +584,6 @@ const filteredTraites = computed(() => {
   return list
 })
 
-// ── Pagination ────────────────────────────────────────────────
 const totalPages = computed(() => Math.ceil(filteredTraites.value.length / pageSize))
 const paginatedTraites = computed(() =>
   filteredTraites.value.slice((currentPage.value - 1) * pageSize, currentPage.value * pageSize)
@@ -400,7 +597,6 @@ const visiblePages = computed(() => {
 
 watch([searchQuery, filterStatutId, filterType], () => { currentPage.value = 1 })
 
-// ── Sélection ─────────────────────────────────────────────────
 const allPageSelected = computed(() =>
   paginatedTraites.value.length > 0 &&
   paginatedTraites.value.every(t => selectedIds.value.includes(t.id))
@@ -418,16 +614,14 @@ function toggleSelectAll() {
     paginatedTraites.value.forEach(t => { if (!selectedIds.value.includes(t.id)) selectedIds.value.push(t.id) })
 }
 
-// Annuler les traites sélectionnées (updateStatus)
 async function cancelSelected() {
   if (!selectedIds.value.length) return
   try {
-    const token = localStorage.getItem('auth_token')
     await Promise.all(
       selectedIds.value.map(id =>
         fetch(`${API_BASE_URL}/traites/${id}/status`, {
           method: 'PATCH',
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          headers: authHeaders(),
         })
       )
     )
@@ -439,36 +633,34 @@ async function cancelSelected() {
   }
 }
 
-// ── Tri ───────────────────────────────────────────────────────
 function sortBy(key: string) {
   if (sortKey.value === key) sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
   else { sortKey.value = key; sortDir.value = 'asc' }
 }
 
-// ── Navigation ────────────────────────────────────────────────
 function goToCreate() {
   router.push({ name: 'TraitesCreate' })
 }
 
 function editTraite(t: TraiteAPI) {
-  // router.push({ name: 'EditTraite', params: { id: t.id } })
-  showToast(`Modification de la traite #${t.id}`, 'success')
+  router.push({ name: 'TraitesEdit', params: { id: t.id } })
 }
 
-// ── Helpers ───────────────────────────────────────────────────
+function openAddStatut() {
+  router.push({ name: 'CreateStatutTraite' })
+}
+
 function formatMontant(n: number): string {
-  return new Intl.NumberFormat('fr-TN', { style: 'currency', currency: 'TND', minimumFractionDigits: 3 }).format(n)
+  return new Intl.NumberFormat('fr-TN', {
+    style: 'currency',
+    currency: 'TND',
+    minimumFractionDigits: 3,
+  }).format(n)
 }
 
 function formatDate(d: string): string {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function isOverdue(t: TraiteAPI): boolean {
-  const nonPayeStatut = statuts.value.find(s => s.statut.toLowerCase().includes('non_pay') || s.statut.toLowerCase() === 'non payé')
-  const isNonPaye = nonPayeStatut ? t.statuts_traites_id === nonPayeStatut.id : false
-  return isNonPaye && new Date(t.date_echeance) < new Date()
 }
 
 function showToast(msg: string, type: 'success' | 'error' = 'success') {
@@ -485,7 +677,6 @@ onMounted(loadAll)
 
 * { font-family: 'Outfit', sans-serif; box-sizing: border-box; }
 
-/* ── Layout ──────────────────────────────────────────────────── */
 .page-layout {
   display: flex;
   min-height: 100vh;
@@ -506,7 +697,6 @@ onMounted(loadAll)
   }
 }
 
-/* ── Header ──────────────────────────────────────────────────── */
 .page-header {
   display: flex;
   align-items: center;
@@ -528,7 +718,6 @@ onMounted(loadAll)
   flex-wrap: wrap;
 }
 
-/* ── Boutons ─────────────────────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -564,7 +753,7 @@ onMounted(loadAll)
   }
 }
 
-/* ── Stats ───────────────────────────────────────────────────── */
+/* ── Stats ─────────────────────────────────────────────────── */
 .stats-bar {
   display: flex;
   gap: 14px;
@@ -578,20 +767,30 @@ onMounted(loadAll)
   display: flex;
   align-items: center;
   gap: 14px;
-  min-width: 140px;
+  min-width: 130px;
   box-shadow: 0 4px 12px rgba(109, 40, 217, 0.2);
   flex: 1;
 
-  &--total   { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
-  &--montant { background: linear-gradient(135deg, #5b21b6, #4c1d95); }
-  &--dynamic { background: linear-gradient(135deg, #0891b2, #0e7490); }
+  &--total       { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+  &--tresorerie  { background: linear-gradient(135deg, #0891b2, #0e7490); }
+  &--payee       { background: linear-gradient(135deg, #059669, #047857); }
+  &--non-echue   { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+  &--echue       { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+  &--impayee     { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+  &--dynamic     { background: linear-gradient(135deg, #0891b2, #0e7490); }
+  &--caisse { background: linear-gradient(135deg, #0891b2, #0e7490); }
 }
 
 .stat-icon  { font-size: 22px; }
-.stat-value { font-size: 20px; font-weight: 700; line-height: 1; }
+.stat-value {
+  font-size: 20px; font-weight: 700; line-height: 1;
+  &.val-positive { color: #6ee7b7; }
+  &.val-negative { color: #fca5a5; }
+}
 .stat-label { font-size: 11px; opacity: 0.85; margin-top: 3px; text-transform: capitalize; }
+.stat-sub   { font-size: 10px; opacity: 0.75; margin-top: 2px; }
 
-/* ── Toast ───────────────────────────────────────────────────── */
+/* ── Toast ─────────────────────────────────────────────────── */
 .toast {
   display: flex;
   align-items: center;
@@ -618,7 +817,7 @@ onMounted(loadAll)
   &:hover { opacity: 1; background: rgba(0,0,0,.06); }
 }
 
-/* ── Modal ───────────────────────────────────────────────────── */
+/* ── Modal ─────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -635,11 +834,17 @@ onMounted(loadAll)
   border-radius: 16px;
   padding: 28px 28px 24px;
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   box-shadow: 0 8px 32px rgba(109,40,217,0.18);
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .modal-title {
@@ -649,15 +854,21 @@ onMounted(loadAll)
   margin: 0;
 }
 
-.modal-input {
-  padding: 10px 14px;
-  border: 1px solid #ddd6fe;
-  border-radius: 10px;
+.modal-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
   font-size: 14px;
-  font-family: 'Outfit', sans-serif;
-  color: #1e1b4b;
-  outline: none;
-  &:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139,92,246,0.12); }
+  color: #9ca3af;
+  padding: 4px 8px;
+  border-radius: 6px;
+  &:hover { background: #f3f4f6; color: #374151; }
+}
+
+.modal-subtitle {
+  margin: -8px 0 0;
+  font-size: 13px;
+  color: #6b7280;
 }
 
 .modal-actions {
@@ -666,7 +877,29 @@ onMounted(loadAll)
   gap: 10px;
 }
 
-/* ── Panneau ─────────────────────────────────────────────────── */
+.statut-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.statut-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 2px solid #f3f4f6;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover { border-color: #ddd6fe; background: #faf9ff; }
+  &--selected { border-color: #8b5cf6; background: #f5f3ff; }
+}
+
+.statut-radio { display: none; }
+
+/* ── Panneau ─────────────────────────────────────────────── */
 .table-panel {
   background: #fff;
   border-radius: 16px;
@@ -674,7 +907,6 @@ onMounted(loadAll)
   overflow: hidden;
 }
 
-/* ── Filter bar ──────────────────────────────────────────────── */
 .filter-bar {
   display: flex;
   align-items: center;
@@ -736,7 +968,6 @@ onMounted(loadAll)
   &:focus { border-color: #8b5cf6; }
 }
 
-/* ── Action bar ──────────────────────────────────────────────── */
 .action-bar {
   display: flex;
   align-items: center;
@@ -754,7 +985,6 @@ onMounted(loadAll)
   margin-right: auto;
 }
 
-/* ── Loader ──────────────────────────────────────────────────── */
 .loader-wrapper {
   display: flex;
   align-items: center;
@@ -775,7 +1005,6 @@ onMounted(loadAll)
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Table ───────────────────────────────────────────────────── */
 .table-wrapper { overflow-x: auto; }
 
 .traites-table {
@@ -829,7 +1058,6 @@ onMounted(loadAll)
   accent-color: #7c3aed;
 }
 
-/* ── Cellules ────────────────────────────────────────────────── */
 .td-montant .montant-value {
   font-weight: 700;
   color: #1e1b4b;
@@ -872,6 +1100,85 @@ onMounted(loadAll)
 
 .no-data { color: #d1d5db; }
 
+.badge-statut {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-family: 'Outfit', sans-serif;
+  &--caisse {
+  background: #ecfeff; color: #164e63; border: 1px solid #a5f3fc;
+  .badge-dot { background: #06b6d4; }
+}
+
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &--success {
+    background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0;
+    .badge-dot { background: #10b981; }
+  }
+  &--danger {
+    background: #fef2f2; color: #991b1b; border: 1px solid #fecaca;
+    .badge-dot { background: #ef4444; }
+  }
+  &--info {
+    background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;
+    .badge-dot { background: #3b82f6; }
+  }
+  &--warning {
+    background: #fffbeb; color: #92400e; border: 1px solid #fde68a;
+    .badge-dot { background: #f59e0b; }
+  }
+}
+
+.badge-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+
+  &--client      { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+  &--fournisseur { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+}
+
+.etat-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.edit-statut-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 3px 5px;
+  border-radius: 6px;
+  opacity: 0.55;
+  transition: opacity 0.15s, background 0.15s;
+  line-height: 1;
+  flex-shrink: 0;
+
+  &:hover {
+    opacity: 1;
+    background: #ede9fe;
+  }
+}
+
 .link-btn {
   background: none;
   border: none;
@@ -884,7 +1191,6 @@ onMounted(loadAll)
   &:hover { text-decoration: underline; }
 }
 
-/* ── Vide ────────────────────────────────────────────────────── */
 .empty-state {
   text-align: center;
   padding: 60px 24px;
@@ -894,7 +1200,6 @@ onMounted(loadAll)
   span { font-size: 13px; }
 }
 
-/* ── Pagination ──────────────────────────────────────────────── */
 .pagination-bar {
   display: flex;
   align-items: center;
@@ -938,7 +1243,6 @@ onMounted(loadAll)
   &[disabled] { opacity: 0.4; cursor: not-allowed; }
 }
 
-/* ── Transitions ─────────────────────────────────────────────── */
 .slide-down-enter-active, .slide-down-leave-active { transition: all 0.25s ease; }
 .slide-down-enter-from,   .slide-down-leave-to     { opacity: 0; transform: translateY(-12px); }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }

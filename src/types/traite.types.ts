@@ -3,8 +3,8 @@ export type TypeTraite = 'fournisseur' | 'client';
 export interface Societe {
   id?: number;
   idSociete?: number;
-  raisonSociale: string;   // ✅ FIX : nom réel du champ backend
-  nom_societe?: string;    // garde pour compatibilité
+  raisonSociale: string;
+  nom_societe?: string;
   adresse?: string;
   email?: string;
   telephone?: number;
@@ -66,13 +66,16 @@ export interface TraiteItem {
   rib: string;
 }
 
+/**
+ * Payload envoyé au POST /api/traites
+ * NE PAS inclure statuts_traites_id — le backend l'ajoute automatiquement en "Non échue"
+ */
 export interface SaveTraitePayload {
   montant: number;
   type_traite: TypeTraite;
   date_emission: string;
   date_echeance: string;
   comptes_bancaires_id: number;
-  statuts_traites_id: number;
   tireur_id: number;
   tireur_type: string;
 }

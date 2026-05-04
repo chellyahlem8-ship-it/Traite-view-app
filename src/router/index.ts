@@ -5,8 +5,6 @@ import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import TiersView from '@/views/tiers/TiersView.vue'
 import CreateTier from '@/views/tiers/CreateTier.vue'
 import EditTier from '@/views/tiers/EditTier.vue'
-import CreateBanque from '@/views/banques/CreateBanque.vue'
-import CreateCompteBancaire from '@/views/comptesBancaires/CreateCompteBancaire.vue'
 import TraitesView from '@/views/TraiteView.vue'
 
 const router = createRouter({
@@ -41,10 +39,17 @@ const router = createRouter({
       component: () => import('@/views/TraitesCreateView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/traites/:id/edit',
+      name: 'TraitesEdit',
+      component: () => import('@/views/TraiteEditView.vue'),
+      props: true,
+      meta: { requiresAuth: true },
+    },
 
     // ── STATUTS TRAITE ─────────────────────────────────────────
     {
-      path: '/statuts-traite/creer',
+      path: '/statuts-traites/creer',
       name: 'CreateStatutTraite',
       component: () => import('@/views/CreateStatutTraite.vue'),
       meta: { requiresAuth: true },
@@ -76,21 +81,6 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
 
-    // ── BANQUES ────────────────────────────────────────────────
-    {
-      path: '/banques/create',
-      name: 'BanquesCreate',
-      component: CreateBanque,
-      meta: { requiresAuth: true },
-    },
-
-    // ── COMPTES BANCAIRES ──────────────────────────────────────
-    {
-      path: '/comptes-bancaires/create',
-      name: 'CreateCompteBancaire',
-      component: CreateCompteBancaire,
-      meta: { requiresAuth: true },
-    },
 
     // ── SOCIÉTÉ ────────────────────────────────────────────────
     {

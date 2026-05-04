@@ -375,7 +375,10 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useTraite } from '@/composables/useTraite';
+
+const router = useRouter();
 
 const {
   societe, loadingSociete, loadingTiers, loadingComptes,
@@ -406,6 +409,12 @@ function handleGenerate(): void {
 
 async function handleSave(): Promise<void> {
   await save();
+  // Redirection automatique vers la liste des traites après enregistrement réussi
+  if (success.value) {
+    setTimeout(() => {
+      router.push({ name: 'Traites' });
+    }, 1200); // laisser le message "✓ Traite(s) enregistrée(s)" visible 1.2s
+  }
 }
 </script>
 

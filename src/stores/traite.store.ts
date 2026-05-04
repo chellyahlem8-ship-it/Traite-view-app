@@ -21,7 +21,6 @@ function generateNumero(index: number, total: number): string {
   return `TRA-${year}-${String(index + 1).padStart(4, '0')}/${String(total).padStart(2, '0')}`;
 }
 
-/** Normalise le titulaire_type Laravel (backslash simple ou double) */
 function isSocieteType(t: string): boolean {
   const norm = t.replace(/\\\\/g, '\\').toLowerCase();
   return norm.includes('societe');
@@ -56,6 +55,7 @@ export const useTraiteStore = defineStore('traite', () => {
   const societe          = ref<Societe | null>(null);
   const tiers            = ref<Tier[]>([]);
   const comptesBancaires = ref<CompteBancaire[]>([]);
+  const statuts          = ref<Array<{ id: number; statut: string }>>([]);
 
   const loadingSociete = ref(false);
   const loadingTiers   = ref(false);
@@ -69,14 +69,13 @@ export const useTraiteStore = defineStore('traite', () => {
   const saveError   = ref<string | null>(null);
   const saveSuccess = ref(false);
 
-  // ✅ CORRECTION : le filtre correspond directement au typeTraite
-  // fournisseur → affiche les fournisseurs dans la liste du tireur
-  // client      → affiche les clients dans la liste du tiré
   const tiersFiltered = computed<Tier[]>(() => {
-    const type = formData.value.typeTraite; // 'fournisseur' ou 'client'
-    return tiers.value.filter(
-      (t) => t.type_tiers?.type?.toLowerCase() === type
-    );
+    const type = formData.value.typeTraite;
+    return tiers.value.filter((t) => {
+      const tierType = t.type_tiers?.type?.toLowerCase() ?? '';
+      // Un tiers qui a exactement le type demandé OU un tiers mixte (ex: "client/fournisseur", "les deux")
+      return tierType === type || tierType.includes(type) || tierType.includes('les deux') || tierType.includes('both');
+    });
   });
 
   const tiersSelectionne = computed<Tier | null>(() => {
@@ -84,31 +83,21 @@ export const useTraiteStore = defineStore('traite', () => {
     return tiers.value.find((t) => t.id === formData.value.tiersSelectionneId) ?? null;
   });
 
-  // ✅ CORRECTION : la logique des comptes est alignée avec les rôles réels
-  // Mode FOURNISSEUR : tiré = MA SOCIÉTÉ → on affiche les comptes de la société
-  // Mode CLIENT      : tiré = le CLIENT  → on affiche les comptes du tier sélectionné
   const comptesDisponibles = computed<CompteBancaire[]>(() => {
     if (formData.value.typeTraite === 'fournisseur') {
-      // Mode FOURNISSEUR : le tiré est MA SOCIÉTÉ → compte bancaire de la société
       const societeId = authStore.user?.idSociete;
-
       return comptesBancaires.value.filter((c) => {
         if (!isSocieteType(c.titulaire_type)) return false;
         if (societeId && c.titulaire_id && c.titulaire_id !== societeId) return false;
         return true;
       });
-
     } else {
-      // Mode CLIENT : le tiré est le CLIENT sélectionné → compte bancaire du tier
       const tierId = formData.value.tiersSelectionneId;
       if (!tierId) return [];
-
       const fromGlobal = comptesBancaires.value.filter(
         (c) => isTierType(c.titulaire_type) && c.titulaire_id === tierId
       );
       if (fromGlobal.length > 0) return fromGlobal;
-
-      // Fallback : comptes embarqués dans l'objet tiers
       const tier = tiersSelectionne.value;
       return tier?.comptes_bancaires ?? [];
     }
@@ -130,8 +119,8 @@ export const useTraiteStore = defineStore('traite', () => {
       f.compteBancaireId !== null &&
       f.montantTotal > 0 &&
       f.nombreTraites >= 1 &&
-      f.lieu.trim() !== '' 
-      );
+      f.lieu.trim() !== ''
+    );
   });
 
   const montantParTraite = computed(() => {
@@ -187,15 +176,6 @@ export const useTraiteStore = defineStore('traite', () => {
       }
 
       comptesBancaires.value = allComptes;
-
-      console.log('[Comptes] reçus depuis /api/comptes-bancaires :', allComptes.length);
-      console.table(allComptes.map((c: CompteBancaire) => ({
-        id: c.id,
-        rib: c.rib,
-        titulaire_type: c.titulaire_type,
-        titulaire_id: c.titulaire_id,
-        banque: c.banque?.nomBanque ?? '—',
-      })));
     } catch (e) {
       console.error('[Comptes] Erreur:', e);
       comptesBancaires.value = [];
@@ -204,8 +184,17 @@ export const useTraiteStore = defineStore('traite', () => {
     }
   }
 
+  async function loadStatuts(): Promise<void> {
+    try {
+      const res = await apiGet<{ success: boolean; data: Array<{ id: number; statut: string }> }>('statuts-traites');
+      statuts.value = res.data ?? [];
+    } catch {
+      statuts.value = [];
+    }
+  }
+
   async function init(): Promise<void> {
-    await Promise.all([loadSociete(), loadTiers(), loadComptesBancaires()]);
+    await Promise.all([loadSociete(), loadTiers(), loadComptesBancaires(), loadStatuts()]);
     applyAutoFill();
   }
 
@@ -219,23 +208,20 @@ export const useTraiteStore = defineStore('traite', () => {
     const adresseSociete = soc?.adresse ?? '';
 
     if (f.typeTraite === 'fournisseur') {
-      // Tireur = fournisseur sélectionné | Tiré = ma société
       f.tireurNom     = tier?.raison_sociale ?? '';
       f.tireurAdresse = tier?.adresse ?? '';
       f.tireNom       = nomSociete;
       f.tireAdresse   = adresseSociete;
-      f.beneficiaire  = tier?.raison_sociale ?? '';
     } else {
-      // Tireur = ma société | Tiré = client sélectionné
       f.tireurNom     = nomSociete;
       f.tireurAdresse = adresseSociete;
       f.tireNom       = tier?.raison_sociale ?? '';
       f.tireAdresse   = tier?.adresse ?? '';
-      f.beneficiaire  = nomSociete;
     }
 
-    f.banqueNom = compte?.banque?.nomBanque ?? '';
-    f.rib       = compte?.rib ?? '';
+    f.banqueNom    = compte?.banque?.nomBanque ?? '';
+    f.rib          = compte?.rib ?? '';
+    f.beneficiaire = f.tireurNom;
   }
 
   watch(
@@ -348,16 +334,17 @@ export const useTraiteStore = defineStore('traite', () => {
       const societeId = authStore.user?.idSociete;
 
       for (const traite of generatedTraites.value) {
+        // ✅ Ne PAS envoyer statuts_traites_id ni statut — le backend l'ajoute automatiquement en "Non échue"
+       // ✅ Ne jamais envoyer statuts_traites_id — backend fixe automatiquement "Non échue"
         await apiPost('traites', {
           montant:              traite.montant,
           type_traite:          traite.typeTraite,
           date_emission:        traite.dateEmission,
           date_echeance:        traite.dateEcheance,
           comptes_bancaires_id: formData.value.compteBancaireId,
-          statuts_traites_id:   1,
-          // ✅ CORRECTION : en mode fournisseur, le tireur est le tier (fournisseur)
-          //                 en mode client, le tireur est la société
-          tireur_id:   formData.value.typeTraite === 'fournisseur' ? tierId   : societeId,
+          tireur_id:   formData.value.typeTraite === 'fournisseur'
+            ? tierId
+            : (societeId ?? authStore.user?.idUtilisateur),
           tireur_type: formData.value.typeTraite === 'fournisseur'
             ? 'App\\Models\\Tier'
             : 'App\\Models\\Societe',
@@ -374,13 +361,13 @@ export const useTraiteStore = defineStore('traite', () => {
   }
 
   return {
-    societe, tiers, comptesBancaires,
+    societe, tiers, comptesBancaires, statuts,
     loadingSociete, loadingTiers, loadingComptes,
     tiersFiltered, tiersSelectionne, comptesDisponibles, compteSelectionne,
     formData, generatedTraites, currentPreviewIndex,
     isSaving, saveError, saveSuccess,
     currentTraite, totalTraites, canGenerate, montantParTraite,
-    init, loadSociete, loadTiers, loadComptesBancaires,
+    init, loadSociete, loadTiers, loadComptesBancaires, loadStatuts,
     updateField, generateTraites, updateTraiteField,
     goToTraite, nextTraite, prevTraite,
     reset, saveToBackend,

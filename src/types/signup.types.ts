@@ -15,10 +15,11 @@ export interface SignupPayload {
 export interface Pack {
   id: number
   nom: string
-  description: string
+  description?: string
   prix: number
   devise: string
-  features: string[]
+  periode?: string        // ex: 'mois', 'trim.', 'an'
+  features?: string[]
   popular?: boolean
 }
 

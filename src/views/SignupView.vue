@@ -9,7 +9,6 @@
             <TraityLogo :size="36" show-text />
           </div>
 
-          <!-- Image selon l'étape -->
           <div class="avatar-wrap">
             <img
               :src="step === 'form' ? t2img : t3img"
@@ -127,10 +126,10 @@
 
     </div>
 
+    <!-- ✅ FIX : passer l'objet "pack" complet au lieu de prix/periode séparés -->
     <Paymentmodal
       v-model="showPaymentModal"
-      :prix="prixAffiche"
-      :periode="periodeLabel"
+      :pack="currentPack"
       :user-email="userData.email"
       :on-confirm="handlePaymentConfirm"
       @confirmed="handlePaymentDone"
@@ -143,8 +142,9 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import TraityLogo from '@/components/TraityLogo.vue'
 import SignupForm from '@/components/SignupForm.vue'
-import PaymentModal from '@/components/Paymentmodal.vue'
+import Paymentmodal from '@/components/Paymentmodal.vue'
 import { signupApi } from '@/api/signup.api'
+import type { Pack } from '@/types/signup.types'
 
 import t2img from '@/assets/t2.jpg'
 import t3img from '@/assets/t3.jpg'
@@ -190,7 +190,16 @@ const priceNote = computed(() => {
   return 'Sans engagement'
 })
 
-// ─── Features de l'app ────────────────────────────────────────
+// ✅ FIX : construire l'objet Pack attendu par Paymentmodal
+const currentPack = computed<Pack>(() => ({
+  id: 1,
+  nom: 'Pro',
+  prix: prixAffiche.value,
+  devise: 'DT',
+  periode: periodeLabel.value,
+}))
+
+// ─── Features ─────────────────────────────────────────────────
 const features = [
   { icon: '📄', label: 'Gestion complète des traites (émission, suivi, encaissement)' },
   { icon: '🏦', label: 'Gestion des comptes bancaires et RIB' },
@@ -420,7 +429,6 @@ function handlePaymentDone() {
   .active & { background: rgba(255,255,255,0.25); color: #fff; }
 }
 
-// ── Carte abonnement unique ────────────────────────────────────
 .pack-card-single {
   background: #faf5ff;
   border: 2px solid #ddd6fe;

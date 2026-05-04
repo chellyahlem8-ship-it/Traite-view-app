@@ -10,6 +10,7 @@ function authHeaders(): Record<string, string> {
   const token = getAuthToken();
   return {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {})
   };
 }
@@ -22,7 +23,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
-/** Enregistre une seule traite */
+/** Crée une traite — statuts_traites_id ajouté automatiquement par le backend */
 export async function saveTraite(payload: SaveTraitePayload): Promise<any> {
   const response = await fetch(`${API_BASE_URL}/traites`, {
     method: 'POST',
@@ -55,6 +56,19 @@ export async function fetchTraites(params?: {
   return handleResponse(response);
 }
 
+/** Met à jour le statut d'une traite — persiste en base */
+export async function updateTraiteStatut(
+  traitId: number,
+  statutId: number
+): Promise<{ success: boolean; data: any }> {
+  const response = await fetch(`${API_BASE_URL}/traites/${traitId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ statuts_traites_id: statutId })
+  });
+  return handleResponse(response);
+}
+
 /** Récupère la liste des tiers */
 export async function fetchTiers(): Promise<{ success: boolean; data: Tier[] }> {
   const response = await fetch(`${API_BASE_URL}/tiers`, {
@@ -76,7 +90,7 @@ export async function fetchComptesBancaires(tierId?: number): Promise<{ success:
   return handleResponse(response);
 }
 
-/** Récupère les statuts de traite — route: GET /api/statuts-traites */
+/** Récupère les statuts de traite */
 export async function fetchStatuts(): Promise<{ success: boolean; data: StatutTraite[] }> {
   const response = await fetch(`${API_BASE_URL}/statuts-traites`, {
     method: 'GET',
@@ -85,7 +99,7 @@ export async function fetchStatuts(): Promise<{ success: boolean; data: StatutTr
   return handleResponse(response);
 }
 
-/** Crée un nouveau statut de traite — route: POST /api/statuts-traites */
+/** Crée un nouveau statut de traite */
 export async function createStatut(statut: string): Promise<{ success: boolean; data: StatutTraite }> {
   const response = await fetch(`${API_BASE_URL}/statuts-traites`, {
     method: 'POST',
@@ -95,7 +109,7 @@ export async function createStatut(statut: string): Promise<{ success: boolean; 
   return handleResponse(response);
 }
 
-/** Annule une traite — route: PATCH /api/traites/{id}/status */
+/** Annule une traite */
 export async function cancelTraite(id: number): Promise<{ success: boolean; message: string }> {
   const response = await fetch(`${API_BASE_URL}/traites/${id}/status`, {
     method: 'PATCH',
@@ -104,7 +118,7 @@ export async function cancelTraite(id: number): Promise<{ success: boolean; mess
   return handleResponse(response);
 }
 
-/** Supprime une traite — route: DELETE /api/traites/{id} */
+/** Supprime une traite */
 export async function deleteTraite(id: number): Promise<{ success: boolean; message: string }> {
   const response = await fetch(`${API_BASE_URL}/traites/${id}`, {
     method: 'DELETE',

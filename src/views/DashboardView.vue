@@ -1,904 +1,770 @@
 <template>
-  <div class="dashboard">
-    <!-- Je garde votre sidebar existante -->
-    <AppSidebar />
+  <div class="dashboard-root">
+    <Sidebar />
 
-    <main class="main-content">
-      <!-- ── TOP BAR ───────────────────────────────────────── -->
-      <div class="top-bar">
-        <div>
-          <h1 class="page-title">Tableau de bord</h1>
-          <p class="page-sub">Bonjour, {{ user?.prenom }} {{ user?.nom }} 👋 — {{ todayFormatted }}</p>
+    <main class="dash-main">
+
+      <!-- ── Header ──────────────────────────────────────── -->
+      <header class="dash-header">
+        <div class="dash-header-left">
+          <h1 class="dash-title"><span class="dash-title-icon">📊</span>Tableau de Bord</h1>
+          <p class="dash-subtitle">Vue globale de vos traites clients &amp; fournisseurs</p>
         </div>
-        
-        <div class="top-bar-right">
-          <!-- Tab Switcher Stylé -->
-          <div class="tab-switcher">
-            <button v-for="tab in tabs" :key="tab.id"
-              :class="['tab-btn', { active: activeTab === tab.id }]"
-              @click="activeTab = tab.id">
-              <span class="tab-icon">{{ tab.icon }}</span>
-              <span class="tab-label">{{ tab.label }}</span>
-            </button>
+        <div class="dash-header-right">
+          <div class="filter-group">
+            <select v-model="filters.period" class="filter-select">
+              <option value="all">Toutes les périodes</option>
+              <option value="month">Ce mois</option>
+              <option value="quarter">Ce trimestre</option>
+              <option value="year">Cette année</option>
+            </select>
+            <select v-model="filters.type" class="filter-select">
+              <option value="all">Tous les types</option>
+              <option value="client">Clients</option>
+              <option value="fournisseur">Fournisseurs</option>
+            </select>
           </div>
-          
-          <!-- Avatar User -->
-          <div class="user-badge">
-            <span>{{ user?.prenom?.charAt(0) }}{{ user?.nom?.charAt(0) }}</span>
-          </div>
+          <button class="toggle-dark" @click="darkMode = !darkMode" :title="darkMode ? 'Mode clair' : 'Mode sombre'">
+            <span v-if="darkMode">☀️</span><span v-else>🌙</span>
+          </button>
         </div>
+      </header>
+
+      <!-- ── Erreur API ────────────────────────────────────── -->
+      <div v-if="!apiOk && !loading" class="api-error">
+        ⚠️ Impossible de contacter l'API. Vérifiez que le serveur Laravel est démarré.
       </div>
 
-      <!-- ── LOADING / ERROR ───────────────────────────────── -->
-      <div v-if="loading" class="loading-state">
+      <!-- ── Loading ──────────────────────────────────────── -->
+      <div v-if="loading" class="dash-loading">
         <div class="spinner"></div>
-        <p>Chargement des données...</p>
-      </div>
-      
-      <div v-else-if="error" class="error-state">
-        <div class="error-icon">⚠️</div>
-        <p class="error-title">Erreur de chargement</p>
-        <p class="error-detail">{{ error }}</p>
-        <button @click="loadAll" class="btn-retry">🔄 Réessayer</button>
+        <span>Chargement des données…</span>
       </div>
 
-      <template v-else>
+      <template v-else-if="apiOk">
 
-        <!-- ══════════════════════════════════════════════════════
-             TAB 1 : VUE GÉNÉRALE
-        ═══════════════════════════════════════════════════════ -->
-        <div v-show="activeTab === 'general'" class="fade-in">
+        <!-- ── KPI Cards ──────────────────────────────────── -->
+        <section class="kpi-grid">
+          <div class="kpi-card" v-for="kpi in kpiCards" :key="kpi.label">
+            <div class="kpi-icon" :style="{ background: kpi.bg }">
+              <span>{{ kpi.icon }}</span>
+            </div>
+            <div class="kpi-body">
+              <p class="kpi-label">{{ kpi.label }}</p>
+              <p class="kpi-value">{{ kpi.value }}</p>
+              <p class="kpi-sub">{{ kpi.sub }}</p>
+            </div>
+          </div>
+        </section>
 
-          <!-- KPI Cards (Design Violet Moderne) -->
-          <div class="kpi-grid">
-            <div class="kpi-card" v-for="kpi in kpiCards" :key="kpi.label">
-              <div :class="['kpi-icon-wrapper', kpi.color]">
-                <span class="kpi-icon">{{ kpi.icon }}</span>
+        <!-- ── Charts ─────────────────────────────────────── -->
+        <section class="charts-grid">
+
+          <!-- 1. Répartition échéances -->
+          <div class="chart-card chart-wide">
+            <div class="chart-card-header">
+              <div>
+                <h3 class="chart-title">📅 Répartition des Échéances</h3>
+                <p class="chart-desc">Montants à encaisser (clients) vs à payer (fournisseurs) — traites non payées</p>
               </div>
-              <div class="kpi-content">
-                <p class="kpi-label">{{ kpi.label }}</p>
-                <p class="kpi-value">{{ kpi.value }}</p>
-                <span :class="['kpi-trend', kpi.trend > 0 ? 'up' : kpi.trend < 0 ? 'down' : 'neutral']">
-                  {{ kpi.trend > 0 ? '↑' : '' }} {{ kpi.trend }}% ce mois
-                </span>
+              <div class="chart-toggle">
+                <button :class="{ active: duePeriod === 'week' }"  @click="duePeriod = 'week'">Semaine</button>
+                <button :class="{ active: duePeriod === 'month' }" @click="duePeriod = 'month'">Mois</button>
+              </div>
+            </div>
+            <div class="chart-canvas-wrap"><canvas ref="dueDatesCanvas"></canvas></div>
+          </div>
+
+          <!-- 2. Donut statuts (LOGIQUE INTERACTIVE) -->
+          <div class="chart-card chart-small">
+            <div class="chart-card-header">
+              <div>
+                <h3 class="chart-title">🥧 Répartition par Statut</h3>
+                <p class="chart-desc">Statuts des {{ donutType === 'client' ? 'Clients' : 'Fournisseurs' }}</p>
+              </div>
+              <!-- BOUTON TOGGLE STYLE TOP ENTITIES -->
+              <div class="chart-toggle">
+                <button :class="{ active: donutType === 'client' }"      @click="donutType = 'client'">Clients</button>
+                <button :class="{ active: donutType === 'fournisseur' }" @click="donutType = 'fournisseur'">Fourns</button>
+              </div>
+            </div>
+            <div class="chart-canvas-wrap pie-wrap"><canvas ref="statusPieCanvas"></canvas></div>
+            <div class="pie-legend">
+              <div v-for="item in pieLegend" :key="item.label" class="pie-legend-item">
+                <span class="pie-dot" :style="{ background: item.color }"></span>
+                <span>{{ item.label }}</span>
+                <span class="pie-count">{{ item.count }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Charts Row -->
-          <div class="charts-row">
-            
-            <!-- Bar Chart -->
-            <div class="chart-card big">
-              <div class="card-header">
-                <h3>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                  Évolution Mensuelle
-                </h3>
-                <div class="legend">
-                  <span class="leg-item paid"></span><span class="leg-txt">Payées</span>
-                  <span class="leg-item unpaid"></span><span class="leg-txt">Impayées</span>
-                  <span class="leg-item cash"></span><span class="leg-txt">Liquide</span>
-                </div>
+          <!-- 3. Top entités -->
+          <div class="chart-card chart-medium">
+            <div class="chart-card-header">
+              <div>
+                <h3 class="chart-title">🏦 Top Entités</h3>
+                <p class="chart-desc">Par montant total toutes traites confondues</p>
               </div>
-              
-              <div class="bar-chart-wrap">
-                <div v-for="(m, i) in monthlyData" :key="i" class="bar-group">
-                  <div class="bars-container">
-                    <div class="bar paid"   :style="{ height: barH(m.paid, maxBarVal) + '%' }" :title="'Payées: ' + fmt(m.paid)"></div>
-                    <div class="bar unpaid" :style="{ height: barH(m.unpaid, maxBarVal) + '%' }" :title="'Impayées: ' + fmt(m.unpaid)"></div>
-                    <div class="bar cash"   :style="{ height: barH(m.cash, maxBarVal) + '%' }" :title="'Liquide: ' + fmt(m.cash)"></div>
+              <div class="chart-toggle">
+                <button :class="{ active: topType === 'client' }"      @click="topType = 'client'">Clients</button>
+                <button :class="{ active: topType === 'fournisseur' }" @click="topType = 'fournisseur'">Fournisseurs</button>
+              </div>
+            </div>
+            <div class="chart-canvas-wrap"><canvas ref="topEntitiesCanvas"></canvas></div>
+          </div>
+
+          <!-- 4. Prévision trésorerie -->
+          <div class="chart-card chart-medium">
+            <div class="chart-card-header">
+              <div>
+                <h3 class="chart-title">📉 Trésorerie Réelle vs Prévisionnelle</h3>
+                <p class="chart-desc">Réel = traites payées · Prévision = traites non payées à venir</p>
+              </div>
+            </div>
+            <div class="chart-canvas-wrap"><canvas ref="forecastCanvas"></canvas></div>
+          </div>
+
+          <!-- 5. Heatmap -->
+          <div class="chart-card chart-full">
+            <div class="chart-card-header">
+              <div>
+                <h3 class="chart-title">📆 Calendrier des Échéances</h3>
+                <p class="chart-desc">Flux net journalier (traites non payées) — vert = encaissements / rouge = décaissements</p>
+              </div>
+              <div class="heatmap-legend">
+                <span class="hm-dot" style="background:#fca5a5"></span> Décaissement
+                <span class="hm-dot" style="background:#d1d5db; margin-left:12px"></span> Aucun
+                <span class="hm-dot" style="background:#6ee7b7; margin-left:12px"></span> Encaissement
+              </div>
+            </div>
+            <div class="heatmap-wrap">
+              <div class="heatmap-months">
+                <div v-for="(month, mi) in heatmapData" :key="mi" class="heatmap-month">
+                  <p class="heatmap-month-label">{{ month.label }}</p>
+                  <div class="heatmap-cells">
+                    <div
+                      v-for="(day, di) in month.days"
+                      :key="di"
+                      class="heatmap-cell"
+                      :style="{ background: heatColor(day.net) }"
+                      :title="`${day.date}: ${fmtAmt(day.net)} DT`"
+                    ></div>
                   </div>
-                  <span class="x-label">{{ m.month }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Donut Chart -->
-            <div class="chart-card small">
-              <div class="card-header">
-                <h3>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
-                  Répartition Statuts
-                </h3>
-              </div>
-              <div class="donut-wrap">
-                <svg viewBox="0 0 120 120" class="donut-chart">
-                  <!-- Background Circle -->
-                  <circle cx="60" cy="60" r="46" fill="none" stroke="#f3f4f6" stroke-width="14" />
-                  <!-- Segments -->
-                  <circle v-for="(seg, i) in donutSegments" :key="i"
-                    cx="60" cy="60" r="46"
-                    fill="none"
-                    :stroke="seg.color"
-                    stroke-width="14"
-                    stroke-linecap="round"
-                    :stroke-dasharray="seg.dash"
-                    :stroke-dashoffset="seg.offset"
-                    transform="rotate(-90 60 60)"
-                  />
-                  <!-- Center Text -->
-                  <text x="60" y="55" text-anchor="middle" class="donut-total">{{ stats.total }}</text>
-                  <text x="60" y="72" text-anchor="middle" class="donut-sub">Traités</text>
-                </svg>
-                <div class="donut-legend">
-                  <div v-for="(seg, i) in donutSegments" :key="i" class="legend-row">
-                    <span class="dot" :style="{ background: seg.color }"></span>
-                    <span class="lbl">{{ seg.label }}</span>
-                    <span class="val">{{ seg.pct }}%</span>
-                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Recent Table -->
-          <div class="table-card">
-            <div class="card-header">
-              <h3>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                Dernières Opérations
-              </h3>
-              <button class="action-link" @click="activeTab = 'statuts'">Voir tout →</button>
-            </div>
-            <div class="table-wrapper">
-              <table class="modern-table">
-                <thead>
-                  <tr>
-                    <th>N° Traite</th>
-                    <th>Tiers</th>
-                    <th>Montant</th>
-                    <th>Émission</th>
-                    <th>Statut</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="t in recentTraites" :key="t.id">
-                    <td class="mono">#{{ t.id }}</td>
-                    <td>
-                      <div class="tier-cell">
-                        <div class="tier-avatar">{{ t.tier_nom?.charAt(0) || '?' }}</div>
-                        {{ t.tier_nom || '—' }}
-                      </div>
-                    </td>
-                    <td class="amount">{{ fmt(t.montant) }} DT</td>
-                    <td class="date">{{ fmtDate(t.date_emission) }}</td>
-                    <td><StatusBadge :value="toEtat(t.statut_label || t.statut)" /></td>
-                  </tr>
-                  <tr v-if="!recentTraites.length">
-                    <td colspan="5" class="empty-state">Aucune donnée récente</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- ══════════════════════════════════════════════════════
-             TAB 2 : STATUTS (Simplifié pour l'exemple, même logique)
-        ═══════════════════════════════════════════════════════ -->
-        <div v-show="activeTab === 'statuts'" class="fade-in">
-          <div class="cards-row">
-             <!-- Status cards here -->
-             <div class="stat-card green">
-               <div class="stat-icon">✓</div>
-               <div class="stat-info">
-                 <span class="stat-num">{{ stats.paye }}</span>
-                 <span class="stat-txt">Payées</span>
-               </div>
-             </div>
-             <div class="stat-card red">
-               <div class="stat-icon">!</div>
-               <div class="stat-info">
-                 <span class="stat-num">{{ stats.impaye }}</span>
-                 <span class="stat-txt">Impayées</span>
-               </div>
-             </div>
-             <div class="stat-card yellow">
-               <div class="stat-icon">$</div>
-               <div class="stat-info">
-                 <span class="stat-num">{{ stats.liquide }}</span>
-                 <span class="stat-txt">Liquide</span>
-               </div>
-             </div>
-          </div>
-          <div class="table-card">
-             <div class="card-header"><h3>Liste Complète</h3></div>
-             <div class="table-wrapper">
-                <table class="modern-table">
-                  <thead><tr><th>N°</th><th>Tiers</th><th>Montant</th><th>Statut</th></tr></thead>
-                  <tbody>
-                    <tr v-for="t in traites" :key="t.id">
-                       <td class="mono">#{{ t.id }}</td>
-                       <td>{{ t.tier_nom }}</td>
-                       <td class="amount">{{ fmt(t.montant) }}</td>
-                       <td><StatusBadge :value="toEtat(t.statut_label)" /></td>
-                    </tr>
-                  </tbody>
-                </table>
-             </div>
-          </div>
-        </div>
-
-        <!-- ... (Les autres tabs utilisent le même principe de design, j'ai inclus le principal) -->
-        <div v-show="['tresorerie', 'risques', 'clients'].includes(activeTab)" class="fade-in">
-           <div class="placeholder-box">
-              <p>Module <strong>{{ activeTab }}</strong> - Prêt à intégrer avec les cartes existantes.</p>
-           </div>
-        </div>
-
+        </section>
       </template>
+
+      <!-- Aucune traite -->
+      <div v-else-if="!loading && traites.length === 0" class="empty-dash">
+        <p>📄 Aucune traite trouvée. Commencez par en créer une.</p>
+      </div>
+
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import AppSidebar from '@/components/Sidebar.vue'
-import StatusBadge from '@/components/StatusBadge.vue'
-// Assurez-vous que le chemin vers votre store est correct
-import { useAuthStore } from '@/stores/auth.store' 
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import Sidebar from '@/components/Sidebar.vue'
+import { Chart, registerables } from 'chart.js'
+import { useTraiteData, isPaid, isNonEchue, isImpayee, isEnCaisse, type TraiteMapped } from '@/composables/useTraiteData'
 
-const authStore = useAuthStore()
-const user = authStore.user
+Chart.register(...registerables)
 
-const loading = ref(true)
-const error = ref('')
-const traites = ref<any[]>([])
-const activeTab = ref('general')
+const {
+  traites, loading, error, apiOk, load,
+  tresorerie, tresoreriePrev,
+  byMonth, byWeek, topEntities, cashflowByDay, forecastData,
+} = useTraiteData()
 
-const tabs = [
-  { id: 'general',     label: 'Vue générale',  icon: '🏠' },
-  { id: 'statuts',     label: 'Statuts',        icon: '📋' },
-  { id: 'tresorerie',  label: 'Trésorerie',     icon: '💰' },
-  { id: 'risques',     label: 'Risques',        icon: '⚠️' },
-  { id: 'clients',     label: 'Clients',        icon: '👥' },
-]
+const darkMode  = ref(false)
+const duePeriod = ref<'week' | 'month'>('month')
+const topType   = ref<'client' | 'fournisseur'>('client')
+const donutType = ref<'client' | 'fournisseur'>('client') // NOUVEAU: Toggle pour le Donut
+const filters   = ref({ period: 'all', type: 'all' })
 
-const today = new Date()
-const todayFormatted = today.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+// Canvas refs
+const dueDatesCanvas    = ref<HTMLCanvasElement | null>(null)
+const statusPieCanvas   = ref<HTMLCanvasElement | null>(null)
+const topEntitiesCanvas = ref<HTMLCanvasElement | null>(null)
+const forecastCanvas    = ref<HTMLCanvasElement | null>(null)
 
-// --- DATA LOADING (Votre logique inchangée) ---
-async function loadAll() {
-  loading.value = true
-  error.value = ''
-  try {
-    const TOKEN_KEY = 'traity_token'
-    const token = localStorage.getItem(TOKEN_KEY)
-    const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+let dueDatesChart:    Chart | null = null
+let statusPieChart:   Chart | null = null
+let topEntitiesChart: Chart | null = null
+let forecastChart:    Chart | null = null
 
-    const response = await fetch(`${BASE}/traites`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      }
-    })
+// ── Filtrage principal ─────────────────────────────────────────────────────
+const filteredTraites = computed<TraiteMapped[]>(() => {
+  let list = traites.value
 
-    if (!response.ok) throw new Error(`Erreur serveur: ${response.status}`)
-    
-    const res = await response.json()
-    traites.value = (res.data || []).map((t: any) => {
-      const sLabel = (t.statut || '').toLowerCase().trim()
-      const tireur = t.tireur || {}
-      const tierNom = tireur.raison_sociale || tireur.nom || ''
-      return { ...t, statut_label: sLabel, tier_nom: tierNom }
-    })
-  } catch (e: any) {
-    error.value = e.message || 'Impossible de charger les données'
-  } finally {
-    loading.value = false
+  if (filters.value.type !== 'all') {
+    list = list.filter(t => t.type_traite === filters.value.type)
   }
-}
 
-onMounted(loadAll)
-
-// --- HELPERS (Votre logique inchangée) ---
-function toEtat(s: string): any {
-  const v = (s || '').toLowerCase().trim()
-  // Mapping simple pour le badge
-  if (v.includes('payé')) return 'payé'
-  if (v.includes('impay')) return 'non_payé'
-  if (v.includes('liquid')) return 'en_caisse'
-  return 'non_échue'
-}
-
-function fmt(n: number | string): string {
-  return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-function fmtDate(d: string): string {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('fr-FR')
-}
-function isStatut(t: any, ...keys: string[]): boolean {
-  const s = (t.statut_label || '').toLowerCase().trim()
-  return keys.some(k => s === k || s.includes(k))
-}
-
-// --- COMPUTED STATS (Votre logique inchangée) ---
-const stats = computed(() => {
-  const all = traites.value
-  const paye    = all.filter(t => isStatut(t, 'payé'))
-  const impaye  = all.filter(t => isStatut(t, 'impay', 'non_pay'))
-  const liquide = all.filter(t => isStatut(t, 'liquide', 'caisse'))
-  return {
-    total:          all.length,
-    paye:           paye.length,
-    impaye:         impaye.length,
-    liquide:        liquide.length,
-    montantTotal:   all.reduce((s, t) => s + Number(t.montant || 0), 0),
-    montantPaye:    paye.reduce((s, t) => s + Number(t.montant || 0), 0),
-    montantImpaye:  impaye.reduce((s, t) => s + Number(t.montant || 0), 0),
-    montantLiquide: liquide.reduce((s, t) => s + Number(t.montant || 0), 0),
+  if (filters.value.period !== 'all') {
+    const now  = new Date()
+    const from = new Date()
+    if (filters.value.period === 'month')   from.setMonth(now.getMonth() - 1)
+    if (filters.value.period === 'quarter') from.setMonth(now.getMonth() - 3)
+    if (filters.value.period === 'year')    from.setFullYear(now.getFullYear() - 1)
+    list = list.filter(t => new Date(t.date_echeance) >= from)
   }
+
+  return list
 })
 
+const sum = (arr: TraiteMapped[]) => arr.reduce((s, t) => s + Number(t.montant || 0), 0)
+
+// ── KPI Cards ──────────────────────────────────────────────────────────────
 const kpiCards = computed(() => {
-  const s = stats.value
+  const t     = filteredTraites.value
+  const today = new Date().toISOString().split('T')[0]
+
+  const payees    = t.filter(x => isPaid(x))        // Payée (fourn) + En caisse (client)
+  const nonEchues = t.filter(x => isNonEchue(x))
+  const impayees  = t.filter(x => isImpayee(x))
+
+  const treso = payees.reduce((s, x) => {
+    const m = Number(x.montant || 0)
+    return s + (x.type_traite === 'client' ? m : -m)
+  }, 0)
+
   return [
-    { label: 'Total Traitre', value: s.total,                    icon: '📄', color: 'purple', trend: 2.5 },
-    { label: 'Montant Global', value: fmt(s.montantTotal) + ' DT', icon: '💰', color: 'blue',   trend: 1.2 },
-    { label: 'Encaissé',       value: fmt(s.montantPaye) + ' DT', icon: '✅', color: 'green',  trend: 5.4 },
-    { label: 'Impayé',         value: fmt(s.montantImpaye) + ' DT',icon: '❌', color: 'red',    trend: -0.8 },
+    {
+      icon: '📄',
+      label: 'Total Traites',
+      value: String(t.length),
+      sub: `${t.filter(x => x.type_traite === 'client').length} clients · ${t.filter(x => x.type_traite === 'fournisseur').length} fournisseurs`,
+      bg: 'linear-gradient(135deg,#7c3aed,#6d28d9)',
+    },
+    {
+      icon: '🏦',
+      label: 'Trésorerie Réelle',
+      value: fmtCurrency(Math.abs(treso)),
+      sub: treso >= 0
+        ? '▲ Encaissements clients > Décaissements fournisseurs'
+        : '▼ Décaissements fournisseurs > Encaissements clients',
+      bg: treso >= 0
+        ? 'linear-gradient(135deg,#0891b2,#0e7490)'
+        : 'linear-gradient(135deg,#dc2626,#b91c1c)',
+    },
+    {
+      icon: '⏳',
+      label: 'Non Échues',
+      value: String(nonEchues.length),
+      sub: fmtCurrency(sum(nonEchues)) + ' · en attente d\'échéance',
+      bg: 'linear-gradient(135deg,#2563eb,#1d4ed8)',
+    },
+    {
+      icon: '❌',
+      label: 'Impayées',
+      value: String(impayees.length),
+      sub: fmtCurrency(sum(impayees)) + ' · à régulariser',
+      bg: 'linear-gradient(135deg,#dc2626,#b91c1c)',
+    },
   ]
 })
 
-const recentTraites = computed(() => [...traites.value].sort((a, b) => b.id - a.id).slice(0, 5))
+// ── Pie / Donut — LOGIQUE INTERACTIVE (Toggle Client/Fourn) ─────────────
+const pieLegend = computed(() => {
+  const t = filteredTraites.value
+  const result: { label: string; count: number; color: string }[] = []
 
-// --- CHARTS LOGIC ---
-const monthlyData = computed(() => {
-  // Logique simplifiée pour la démo (mois fictifs si pas assez de données)
-  const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin']
-  return months.map(m => ({
-    month: m,
-    paid: Math.floor(Math.random() * 10000) + 2000, // Remplacer par vos vrais calculs
-    unpaid: Math.floor(Math.random() * 5000),
-    cash: Math.floor(Math.random() * 3000)
-  }))
+  // Filtrer par le type sélectionné dans le toggle
+  const typeList = t.filter(x => x.type_traite === donutType.value)
+
+  if (donutType.value === 'client') {
+    // LOGIQUE CLIENT : En caisse, Impayée, Non échue
+    const enCaisse = typeList.filter(x => isEnCaisse(x))
+    if (enCaisse.length > 0) result.push({ label: 'En caisse', count: enCaisse.length, color: '#059669' }) // Vert
+
+    const impayees = typeList.filter(x => isImpayee(x))
+    if (impayees.length > 0) result.push({ label: 'Impayée', count: impayees.length, color: '#dc2626' }) // Rouge
+
+    const nonEchues = typeList.filter(x => !isEnCaisse(x) && !isImpayee(x))
+    if (nonEchues.length > 0) result.push({ label: 'Non échue', count: nonEchues.length, color: '#2563eb' }) // Bleu
+
+  } else {
+    // LOGIQUE FOURNISSEUR : Payée, Impayée, Non échue
+    const payees = typeList.filter(x => isPaid(x))
+    if (payees.length > 0) result.push({ label: 'Payée', count: payees.length, color: '#059669' }) // Vert
+
+    const impayees = typeList.filter(x => isImpayee(x))
+    if (impayees.length > 0) result.push({ label: 'Impayée', count: impayees.length, color: '#dc2626' }) // Rouge
+
+    const nonEchues = typeList.filter(x => !isPaid(x) && !isImpayee(x))
+    if (nonEchues.length > 0) result.push({ label: 'Non échue', count: nonEchues.length, color: '#7c3aed' }) // Violet
+  }
+
+  return result
 })
-const maxBarVal = computed(() => Math.max(...monthlyData.value.flatMap(m => [m.paid, m.unpaid, m.cash]), 1))
 
-function barH(val: number, max: number): number {
-  return Math.max(5, (val / max) * 100)
+// ── Heatmap ────────────────────────────────────────────────────────────────
+const heatmapData = computed(() => {
+  const cfMap   = cashflowByDay()
+  const months: { label: string; days: { date: string; net: number }[] }[] = []
+  const today   = new Date()
+
+  for (let m = -2; m <= 3; m++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + m, 1)
+    const label      = d.toLocaleString('fr-FR', { month: 'short', year: '2-digit' })
+    const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+    const days: { date: string; net: number }[] = []
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      days.push({ date: dateStr, net: cfMap[dateStr] ?? 0 })
+    }
+    months.push({ label, days })
+  }
+  return months
+})
+
+function heatColor(net: number): string {
+  if (net > 0) {
+    const i = Math.min(net / 5000, 1)
+    return `rgba(16, ${Math.round(167 + i * 88)}, 93, ${0.3 + i * 0.7})`
+  }
+  if (net < 0) {
+    const i = Math.min(Math.abs(net) / 5000, 1)
+    return `rgba(220, 38, 38, ${0.2 + i * 0.7})`
+  }
+  return '#e5e7eb'
 }
 
-const donutSegments = computed(() => {
-  const s = stats.value
-  if (!s.total) return []
-  const circumference = 2 * Math.PI * 46 // r=46
-  const items = [
-    { label: 'Payées',   count: s.paye,    color: '#10b981' }, // Emerald 500
-    { label: 'Impayées', count: s.impaye,  color: '#ef4444' }, // Red 500
-    { label: 'Liquide',  count: s.liquide, color: '#f59e0b' }, // Amber 500
-    { label: 'Autres',   count: s.total - s.paye - s.impaye - s.liquide, color: '#e5e7eb' }, // Gray 200
-  ].filter(i => i.count > 0)
-  
-  let offset = 0
-  return items.map(item => {
-    const pct = Math.round(item.count / s.total * 100)
-    const dash = (item.count / s.total) * circumference
-    const seg = { ...item, pct, dash: `${dash} ${circumference}`, offset: -offset }
-    offset += dash
-    return seg
+// ── Couleurs Chart ─────────────────────────────────────────────────────────
+const PURPLE    = '#7c3aed'
+const PURPLE_BG = 'rgba(124,58,237,0.15)'
+const GREEN     = '#059669'
+const GREEN_BG  = 'rgba(5,150,105,0.15)'
+
+function chartDefaults() {
+  return {
+    color:     darkMode.value ? '#e5e7eb' : '#374151',
+    gridColor: darkMode.value ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
+  }
+}
+
+// ── Chart 1 : Répartition échéances ───────────────────────────────────────
+function buildDueDatesChart(): void {
+  if (!dueDatesCanvas.value) return
+  dueDatesChart?.destroy()
+  const { color, gridColor } = chartDefaults()
+  const labels: string[] = []
+  const clientData: number[] = []
+  const fournData:  number[] = []
+
+  if (duePeriod.value === 'month') {
+    byMonth().forEach(m => {
+      labels.push(m.m)
+      clientData.push(m.client)
+      fournData.push(m.fourn)
+    })
+  } else {
+    byWeek().forEach(w => {
+      labels.push(w.label)
+      clientData.push(w.client)
+      fournData.push(w.fourn)
+    })
+  }
+
+  dueDatesChart = new Chart(dueDatesCanvas.value, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'À encaisser (clients)',
+          data: clientData,
+          backgroundColor: PURPLE_BG,
+          borderColor: PURPLE,
+          borderWidth: 2,
+          borderRadius: 6,
+        },
+        {
+          label: 'À payer (fournisseurs)',
+          data: fournData,
+          backgroundColor: GREEN_BG,
+          borderColor: GREEN,
+          borderWidth: 2,
+          borderRadius: 6,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 700, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { labels: { color, font: { size: 12 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${fmtAmt(ctx.parsed.y)} DT`,
+          },
+        },
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color } },
+        y: {
+          grid: { color: gridColor },
+          ticks: { color, callback: v => fmtAmt(Number(v)) },
+          beginAtZero: true,
+        },
+      },
+    },
   })
+}
+
+// ── Chart 2 : Donut statuts (Dynamique avec toggle) ───────────────────────
+function buildStatusPieChart(): void {
+  if (!statusPieCanvas.value) return
+  statusPieChart?.destroy()
+  const legend = pieLegend.value
+  if (legend.length === 0) return
+
+  statusPieChart = new Chart(statusPieCanvas.value, {
+    type: 'doughnut',
+    data: {
+      labels:   legend.map(l => l.label),
+      datasets: [{
+        data:            legend.map(l => l.count),
+        backgroundColor: legend.map(l => l.color),
+        borderWidth: 0,
+        hoverOffset: 8,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      animation: { duration: 800, easing: 'easeOutBack' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.parsed} traite${ctx.parsed > 1 ? 's' : ''}`,
+          },
+        },
+      },
+    },
+  })
+}
+
+// ── Chart 3 : Top entités ─────────────────────────────────────────────────
+function buildTopEntitiesChart(): void {
+  if (!topEntitiesCanvas.value) return
+  topEntitiesChart?.destroy()
+  const { color, gridColor } = chartDefaults()
+  const entities = topEntities(topType.value, 8)
+  const col = topType.value === 'client' ? PURPLE : GREEN
+  const bg  = topType.value === 'client' ? PURPLE_BG : GREEN_BG
+
+  if (entities.length === 0) return
+
+  topEntitiesChart = new Chart(topEntitiesCanvas.value, {
+    type: 'bar',
+    data: {
+      labels:   entities.map(e => e.name),
+      datasets: [{
+        label: `Montant total (${topType.value})`,
+        data:  entities.map(e => e.montant),
+        backgroundColor: bg,
+        borderColor: col,
+        borderWidth: 2,
+        borderRadius: 6,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 600 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const e = entities[ctx.dataIndex]
+              return ` ${fmtAmt(ctx.parsed.x)} DT · ${e.count} traite${e.count > 1 ? 's' : ''}`
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: gridColor },
+          ticks: { color, callback: v => fmtAmt(Number(v)) },
+          beginAtZero: true,
+        },
+        y: { grid: { color: gridColor }, ticks: { color } },
+      },
+    },
+  })
+}
+
+// ── Chart 4 : Prévision trésorerie ────────────────────────────────────────
+function buildForecastChart(): void {
+  if (!forecastCanvas.value) return
+  forecastChart?.destroy()
+  const { color, gridColor } = chartDefaults()
+  const fd = forecastData.value
+
+  if (fd.labels.length === 0) return
+
+  forecastChart = new Chart(forecastCanvas.value, {
+    type: 'line',
+    data: {
+      labels: fd.labels,
+      datasets: [
+        {
+          label: 'Réel (payées)',
+          data:  fd.reel as (number | null)[],
+          borderColor: GREEN,
+          backgroundColor: GREEN_BG,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 5,
+          pointBackgroundColor: GREEN,
+          borderWidth: 2.5,
+          spanGaps: true,
+        },
+        {
+          label: 'Prévisionnel (non payées)',
+          data:  fd.prev as (number | null)[],
+          borderColor: PURPLE,
+          backgroundColor: PURPLE_BG,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 5,
+          pointBackgroundColor: PURPLE,
+          borderWidth: 2.5,
+          borderDash: [6, 3],
+          spanGaps: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 700 },
+      plugins: {
+        legend: { labels: { color, font: { size: 12 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${fmtAmt(ctx.parsed.y ?? 0)} DT`,
+          },
+        },
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color } },
+        y: {
+          grid: { color: gridColor },
+          ticks: { color, callback: v => fmtAmt(Number(v)) },
+        },
+      },
+    },
+  })
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function fmtAmt(n: number | null | undefined): string {
+  if (n == null || isNaN(n)) return '0'
+  const abs = Math.abs(n)
+  const sign = n < 0 ? '-' : ''
+  if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + 'M'
+  if (abs >= 1_000)     return sign + (abs / 1_000).toFixed(1) + 'k'
+  return sign + Math.round(abs).toString()
+}
+
+function fmtCurrency(n: number): string {
+  return new Intl.NumberFormat('fr-TN', {
+    style: 'currency',
+    currency: 'TND',
+    minimumFractionDigits: 3,
+  }).format(n)
+}
+
+function rebuildAll(): void {
+  nextTick(() => {
+    buildDueDatesChart()
+    buildStatusPieChart()
+    buildTopEntitiesChart()
+    buildForecastChart()
+  })
+}
+
+// ── Watchers ───────────────────────────────────────────────────────────────
+watch([filters, darkMode, traites], rebuildAll, { deep: true })
+watch(duePeriod, () => nextTick(buildDueDatesChart))
+watch(topType,   () => nextTick(buildTopEntitiesChart))
+watch(donutType, () => nextTick(buildStatusPieChart)) // NOUVEAU WATCHER
+
+// ── Lifecycle ──────────────────────────────────────────────────────────────
+onMounted(async () => {
+  await load()
+  rebuildAll()
+})
+
+onUnmounted(() => {
+  dueDatesChart?.destroy()
+  statusPieChart?.destroy()
+  topEntitiesChart?.destroy()
+  forecastChart?.destroy()
 })
 </script>
 
-<style scoped lang="scss">
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
-
-/* ── THEME VIOLET MODERNE ────────────────────────────────────── */
-:root {
-  --primary: #7c3aed;      /* Violet 600 */
-  --primary-light: #8b5cf6;/* Violet 500 */
-  --primary-dark: #5b21b6; /* Violet 800 */
-  --bg-body: #f8fafc;      /* Slate 50 (Très clair) */
-  --bg-card: #ffffff;
-  --text-main: #1e293b;   /* Slate 800 */
-  --text-muted: #64748b;  /* Slate 500 */
-  
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --info: #3b82f6;
-
-  --shadow-sm: 0 1px 2px 0 rgba(124, 58, 237, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(124, 58, 237, 0.1), 0 2px 4px -1px rgba(124, 58, 237, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(124, 58, 237, 0.1), 0 4px 6px -2px rgba(124, 58, 237, 0.05);
-  
-  --radius: 16px;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-.dashboard {
+<style scoped>
+.dashboard-root {
   display: flex;
   min-height: 100vh;
-  font-family: 'Outfit', sans-serif;
-  background-color: var(--bg-body);
-  color: var(--text-main);
+  background: #f5f3ff;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
-.main-content {
-  margin-left: 260px; /* Largeur Sidebar */
+.dash-main {
   flex: 1;
-  padding: 32px;
-  width: calc(100% - 260px);
-  
-  @media (max-width: 1024px) {
-    margin-left: 0;
-    width: 100%;
-    padding: 20px;
-  }
+  margin-left: 240px;
+  padding: 28px 32px;
+  overflow-y: auto;
+  min-width: 0;
+}
+@media (max-width: 768px) {
+  .dash-main { margin-left: 0; padding: 80px 16px 24px; }
 }
 
-/* ── TOP BAR ─────────────────────────────────────────────────── */
-.top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 32px;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-main);
-  letter-spacing: -0.5px;
-}
-.page-sub {
+.api-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  border-radius: 10px;
+  padding: 14px 18px;
   font-size: 14px;
-  color: var(--text-muted);
-  margin-top: 4px;
-  font-weight: 500;
+  margin-bottom: 20px;
 }
 
-.top-bar-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+.dash-loading {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; padding: 80px 24px; color: #7c3aed; font-size: 15px;
 }
-
-/* Tab Switcher Modern */
-.tab-switcher {
-  display: flex;
-  background: rgba(255, 255, 255, 0.8);
-  padding: 4px;
-  border-radius: 12px;
-  border: 1px solid rgba(124, 58, 237, 0.1);
-  backdrop-filter: blur(10px);
+.spinner {
+  width: 28px; height: 28px;
+  border: 3px solid #ede9fe; border-top-color: #7c3aed;
+  border-radius: 50%; animation: spin 0.7s linear infinite;
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-.tab-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.dash-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: 16px; margin-bottom: 28px;
 }
-
-.tab-btn:hover {
-  background: rgba(124, 58, 237, 0.05);
-  color: var(--primary);
+.dash-title {
+  font-size: 1.5rem; font-weight: 700; color: #1e1b4b;
+  margin: 0; display: flex; align-items: center; gap: 8px;
 }
-
-.tab-btn.active {
-  background: var(--primary);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+.dash-title-icon { font-size: 1.3rem; }
+.dash-subtitle { margin: 4px 0 0; color: #6b7280; font-size: 0.87rem; }
+.dash-header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.filter-group { display: flex; gap: 8px; }
+.filter-select {
+  padding: 7px 12px; border-radius: 8px; border: 1.5px solid #ddd6fe;
+  background: white; color: #374151; font-size: 0.85rem; cursor: pointer;
+  outline: none; transition: border-color 0.2s;
 }
-
-.tab-icon { font-size: 16px; }
-
-/* User Badge */
-.user-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
-  border: 3px solid white;
-  box-shadow: var(--shadow-md);
+.filter-select:hover { border-color: #7c3aed; }
+.toggle-dark {
+  width: 36px; height: 36px; border-radius: 8px; border: 1.5px solid #ddd6fe;
+  background: white; cursor: pointer; font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
 }
+.toggle-dark:hover { background: #ede9fe; }
 
-/* ── KPI CARDS ──────────────────────────────────────────────── */
+/* KPI */
 .kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 24px;
-  margin-bottom: 32px;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;
 }
+@media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px)  { .kpi-grid { grid-template-columns: 1fr; } }
 
 .kpi-card {
-  background: var(--bg-card);
-  border-radius: var(--radius);
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid rgba(226, 232, 240, 0.6);
+  background: white; border-radius: 14px; padding: 20px;
+  display: flex; align-items: center; gap: 16px;
+  box-shadow: 0 2px 12px rgba(124,58,237,0.07); border: 1px solid #ede9fe;
   transition: transform 0.2s, box-shadow 0.2s;
-  
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
-  }
 }
-
-.kpi-icon-wrapper {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  
-  &.purple { background: rgba(124, 58, 237, 0.1); color: var(--primary); }
-  &.blue   { background: rgba(59, 130, 246, 0.1); color: var(--info); }
-  &.green  { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-  &.red    { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(124,58,237,0.13); }
+.kpi-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; flex-shrink: 0;
 }
+.kpi-body { min-width: 0; }
+.kpi-label { font-size: 0.75rem; color: #6b7280; font-weight: 600; margin: 0 0 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+.kpi-value { font-size: 1.3rem; font-weight: 700; color: #1e1b4b; margin: 0 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi-sub   { font-size: 0.72rem; color: #9ca3af; margin: 0; }
 
-.kpi-content {
-  display: flex;
-  flex-direction: column;
+/* Charts */
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+.chart-wide   { grid-column: span 2; }
+.chart-small  { grid-column: span 1; }
+.chart-medium { grid-column: span 1; min-width: 0; }
+.chart-full   { grid-column: span 3; }
+
+@media (max-width: 1100px) {
+  .charts-grid { grid-template-columns: 1fr 1fr; }
+  .chart-wide, .chart-small { grid-column: span 2; }
+  .chart-full { grid-column: span 2; }
 }
-
-.kpi-label {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.kpi-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-main);
-  line-height: 1;
-}
-
-.kpi-trend {
-  font-size: 11px;
-  font-weight: 600;
-  margin-top: 6px;
-  
-  &.up { color: var(--success); }
-  &.down { color: var(--danger); }
-  &.neutral { color: var(--text-muted); }
-}
-
-/* ── CHARTS ──────────────────────────────────────────────────── */
-.charts-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 24px;
-  margin-bottom: 32px;
-  
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
-  }
+@media (max-width: 700px) {
+  .charts-grid { grid-template-columns: 1fr; }
+  .chart-wide, .chart-small, .chart-medium, .chart-full { grid-column: span 1; }
 }
 
 .chart-card {
-  background: var(--bg-card);
-  border-radius: var(--radius);
-  padding: 24px;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid rgba(226, 232, 240, 0.6);
-  display: flex;
-  flex-direction: column;
+  background: white; border-radius: 16px; padding: 20px 20px 16px;
+  box-shadow: 0 2px 12px rgba(124,58,237,0.07); border: 1px solid #ede9fe;
+  display: flex; flex-direction: column; gap: 14px; min-width: 0;
 }
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  
-  h3 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-main);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+.chart-card-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
 }
+.chart-title { font-size: 0.95rem; font-weight: 700; color: #1e1b4b; margin: 0; }
+.chart-desc  { font-size: 0.75rem; color: #9ca3af; margin: 3px 0 0; }
 
-/* Custom Bar Chart */
-.bar-chart-wrap {
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  padding-bottom: 10px;
-  min-height: 240px;
+.chart-toggle {
+  display: flex; background: #f3f0ff; border-radius: 8px; padding: 3px; gap: 2px;
 }
-
-.bar-group {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  height: 100%;
-  justify-content: flex-end;
+.chart-toggle button {
+  padding: 4px 12px; border-radius: 6px; border: none; background: transparent;
+  color: #6b7280; font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: all 0.2s;
 }
+.chart-toggle button.active { background: #7c3aed; color: white; box-shadow: 0 2px 8px rgba(124,58,237,0.3); }
 
-.bars-container {
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
-  width: 100%;
-  height: 100%;
-  max-height: 200px;
-  border-radius: 6px;
-  overflow: hidden;
-}
+.chart-canvas-wrap { height: 220px; position: relative; }
+.pie-wrap { height: 170px; }
 
-.bar {
-  flex: 1;
-  border-radius: 4px 4px 0 0;
-  transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-  position: relative;
-  
-  &:hover {
-    opacity: 0.9;
-    filter: brightness(1.1);
-  }
-}
+/* Légende donut — nombre de traites */
+.pie-legend { display: flex; flex-direction: column; gap: 6px; }
+.pie-legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #374151; }
+.pie-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.pie-count { margin-left: auto; font-weight: 700; color: #1e1b4b; }
 
-.bar.paid   { background: var(--success); }
-.bar.unpaid { background: var(--danger); }
-.bar.cash   { background: var(--warning); }
+/* Heatmap */
+.heatmap-legend { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #6b7280; }
+.hm-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.heatmap-wrap { overflow-x: auto; }
+.heatmap-months { display: flex; gap: 20px; padding-bottom: 4px; min-width: max-content; }
+.heatmap-month { display: flex; flex-direction: column; gap: 6px; }
+.heatmap-month-label { font-size: 0.75rem; color: #9ca3af; font-weight: 600; text-transform: uppercase; }
+.heatmap-cells { display: grid; grid-template-columns: repeat(7, 14px); gap: 3px; }
+.heatmap-cell { width: 14px; height: 14px; border-radius: 3px; cursor: pointer; transition: transform 0.15s; }
+.heatmap-cell:hover { transform: scale(1.4); z-index: 1; }
 
-.x-label {
-  margin-top: 12px;
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.legend {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.leg-item {
-  width: 10px; height: 10px; border-radius: 50%;
-  display: inline-block;
-  &.paid { background: var(--success); }
-  &.unpaid { background: var(--danger); }
-  &.cash { background: var(--warning); }
-}
-
-/* Donut Chart */
-.donut-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
-  height: 100%;
-}
-
-.donut-chart {
-  width: 160px;
-  height: 160px;
-  animation: spinIn 1s ease-out;
-}
-
-@keyframes spinIn { from { stroke-dasharray: 0 1000; } }
-
-.donut-total {
-  font-size: 26px;
-  font-weight: 700;
-  fill: var(--text-main);
-}
-
-.donut-sub {
-  font-size: 12px;
-  fill: var(--text-muted);
-}
-
-.donut-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.legend-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: var(--text-main);
-  font-weight: 500;
-}
-
-.dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.lbl { flex: 1; }
-.val { font-weight: 700; color: var(--text-main); }
-
-/* ── TABLES ──────────────────────────────────────────────────── */
-.table-card {
-  background: var(--bg-card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid rgba(226, 232, 240, 0.6);
-  overflow: hidden;
-}
-
-.action-link {
-  color: var(--primary);
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  background: none;
-  border: none;
-  &:hover { text-decoration: underline; }
-}
-
-.table-wrapper {
-  overflow-x: auto;
-}
-
-.modern-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-thead {
-  background: #f8fafc;
-}
-
-th {
-  text-align: left;
-  padding: 16px 24px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
-  font-weight: 600;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-td {
-  padding: 16px 24px;
-  border-bottom: 1px solid #f1f5f9;
-  color: var(--text-main);
-}
-
-tr:last-child td { border-bottom: none; }
-
-tr:hover td {
-  background: #f8fafc;
-}
-
-.mono { font-family: monospace; color: var(--text-muted); font-weight: 600; }
-.amount { font-weight: 700; color: var(--text-main); }
-.date { color: var(--text-muted); }
-
-.tier-cell {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.tier-avatar {
-  width: 32px; height: 32px;
-  background: #e0e7ff;
-  color: var(--primary);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 12px;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 32px;
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-/* ── STATUS CARDS (Tab 2) ─────────────────────────────────────── */
-.cards-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 24px;
-}
-.stat-card {
-  background: white;
-  padding: 20px;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  border: 1px solid #f1f5f9;
-  
-  &.green .stat-icon { background: #d1fae5; color: #059669; }
-  &.red .stat-icon { background: #fee2e2; color: #dc2626; }
-  &.yellow .stat-icon { background: #fef3c7; color: #d97706; }
-}
-
-.stat-icon {
-  width: 40px; height: 40px;
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700;
-}
-.stat-info { display: flex; flex-direction: column; }
-.stat-num { font-size: 20px; font-weight: 700; color: var(--text-main); }
-.stat-txt { font-size: 12px; color: var(--text-muted); }
-
-/* ── ANIMATIONS ──────────────────────────────────────────────── */
-.fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ── LOADING / ERROR ─────────────────────────────────────────── */
-.loading-state, .error-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px;
-  color: var(--text-muted);
-}
-.spinner {
-  width: 40px; height: 40px;
-  border: 3px solid rgba(124, 58, 237, 0.1);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 16px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.btn-retry {
-  margin-top: 16px;
-  padding: 8px 16px;
-  background: var(--danger);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.placeholder-box {
-  background: white;
-  padding: 40px;
-  border-radius: var(--radius);
-  text-align: center;
-  color: var(--text-muted);
-  border: 2px dashed #e2e8f0;
+.empty-dash {
+  text-align: center; padding: 80px 24px; color: #9ca3af; font-size: 15px;
 }
 </style>
